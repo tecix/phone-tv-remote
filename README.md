@@ -1,4 +1,4 @@
-# tex-TV Remote (Android)
+# TV Remote: Google, HA (Android)
 
 A phone remote for Google TV / Android TV, built with Kotlin, Jetpack Compose and
 **Material 3 Expressive**. One app, two ways to reach the TV, switchable at the top of the screen:
@@ -22,6 +22,7 @@ A phone remote for Google TV / Android TV, built with Kotlin, Jetpack Compose an
 | Live status | Volume, mute, current app and standby (Direct); a 16:9 tile with a TV screenshot, app name and uptime (Home Assistant) |
 | SmartTube | **Captions** (configurable D-pad macro) and **1.5× speed** |
 | Quick launch | YouTube, Web Video Caster, AirReceiver, VLC |
+| IR Power (Home Assistant) | Runs your IR power script or button; set its entity in Settings → Home Assistant |
 | Phone | Volume keys control the TV, haptics, dynamic colour, light/dark |
 
 ## Install

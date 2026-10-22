@@ -135,6 +135,7 @@ private fun App(vm: RemoteViewModel) {
                     smartTubeCaptions = vm::smartTubeCaptions,
                     smartTubeSpeed = vm::smartTubeSpeed,
                     refreshTile = vm::refreshTile,
+                    irPower = vm::irPower,
                 ),
             )
             Screen.Devices -> {

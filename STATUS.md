@@ -1,4 +1,4 @@
-# tex-TV Remote — Status
+# TV Remote: Google, HA — Status
 
 _Last updated: 2026-10-22_
 

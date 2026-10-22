@@ -19,6 +19,8 @@ data class HaConfig(
     val entityId: String = "",
     /** The Android Debug Bridge media_player of the same TV; blank means "derive from [entityId]". */
     val mediaEntityId: String = "",
+    /** Script or button that sends the TV's infrared power command. */
+    val irPowerEntityId: String = "",
 ) {
     val isComplete get() = url.isNotBlank() && token.isNotBlank() && entityId.isNotBlank()
 
@@ -114,12 +116,35 @@ class HomeAssistantRemote(
 ) : RemoteBackend {
     private val http = HaHttp(config)
     val entityId = config.entityId.trim()
+    private val configIrPowerEntityId = config.irPowerEntityId.trim()
 
     private val worker = ThreadPoolExecutor(1, 1, 0, TimeUnit.MILLISECONDS, LinkedBlockingQueue()) {
         Thread(it, "home-assistant").apply { isDaemon = true }
     }
 
     override fun press(key: TvKey) = command("input keyevent ${key.code}", droppable = true)
+
+    fun irPower() {
+        val target = configIrPowerEntityId
+        val domain = target.substringBefore('.')
+        val service = when (domain) {
+            "script" -> "turn_on"
+            "button" -> "press"
+            else -> throw HomeAssistantException("Set an IR power script or button in Settings")
+        }
+        if (!Regex("(?:script|button)\\.[a-z0-9_]+").matches(target)) {
+            throw HomeAssistantException("The IR power entity must be a script or button entity ID")
+        }
+        if (worker.isShutdown) return
+        worker.execute {
+            try {
+                http.callService(domain, service, JSONObject().put("entity_id", target))
+            } catch (e: HomeAssistantException) {
+                Log.w(TAG, "IR power failed: ${e.message}")
+                onError(e.message ?: "IR power failed")
+            }
+        }
+    }
 
     override fun longPress(key: TvKey) = command("input keyevent --longpress ${key.code}")
 

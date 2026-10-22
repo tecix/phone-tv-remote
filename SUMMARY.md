@@ -1,4 +1,4 @@
-# tex-TV Remote — Summary
+# TV Remote: Google, HA — Summary
 
 Android phone remote for Google TV / Android TV, built with Kotlin, Jetpack Compose and
 Material 3 Expressive. It drives the TV two ways, switchable at the top of the remote:

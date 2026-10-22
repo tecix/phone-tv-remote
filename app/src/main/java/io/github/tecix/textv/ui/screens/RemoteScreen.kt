@@ -86,11 +86,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.tecix.textv.DirectState
 import io.github.tecix.textv.HaState
 import io.github.tecix.textv.HaTile
+import io.github.tecix.textv.R
 import io.github.tecix.textv.TvKey
 import io.github.tecix.textv.TvStatus
 import io.github.tecix.textv.data.Route
@@ -123,6 +125,7 @@ class RemoteActions(
     val smartTubeCaptions: () -> Unit,
     val smartTubeSpeed: () -> Unit,
     val refreshTile: () -> Unit,
+    val irPower: () -> Unit,
 )
 
 @Composable
@@ -142,7 +145,7 @@ fun RemoteScreen(
                 title = {
                     Column {
                         Text(
-                            settings.selectedTv?.name ?: "tex-TV Remote",
+                            settings.selectedTv?.name ?: stringResource(R.string.app_name),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -175,7 +178,7 @@ fun RemoteScreen(
             ) {
                 RouteSwitcher(settings.route, actions.setRoute)
                 ConnectionCard(settings, direct, ha, status, haTile, actions)
-                TopKeys(actions, canSend)
+                TopKeys(actions, canSend, settings)
                 DPad(actions, canSend)
                 NavKeys(actions, canSend)
                 VolumeRow(status, settings.route, actions, canSend)
@@ -369,7 +372,9 @@ private fun NowPlaying(status: TvStatus, showVolume: Boolean) {
 }
 
 @Composable
-private fun TopKeys(actions: RemoteActions, enabled: Boolean) {
+private fun TopKeys(actions: RemoteActions, enabled: Boolean, settings: Settings) {
+    val useIrPower = settings.route == Route.HOME_ASSISTANT
+    val irPowerConfigured = settings.ha.irPowerEntityId.isNotBlank()
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -377,8 +382,14 @@ private fun TopKeys(actions: RemoteActions, enabled: Boolean) {
     ) {
         val power = MaterialShapes.Cookie4Sided.toShape()
         RemoteIconButton(
-            Icons.Rounded.PowerSettingsNew, "Power", { actions.press(TvKey.POWER) },
-            enabled = enabled,
+            Icons.Rounded.PowerSettingsNew,
+            if (useIrPower) "IR Power" else "Power",
+            onPress = if (useIrPower) {
+                if (irPowerConfigured) actions.irPower else actions.openSettings
+            } else {
+                { actions.press(TvKey.POWER) }
+            },
+            enabled = enabled || (useIrPower && !irPowerConfigured),
             shapes = IconButtonDefaults.shapes(power, power),
             colors = IconButtonDefaults.filledIconButtonColors(
                 containerColor = MaterialTheme.colorScheme.errorContainer,

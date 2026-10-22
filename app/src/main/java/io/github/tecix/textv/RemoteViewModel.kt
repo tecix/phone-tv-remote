@@ -80,7 +80,7 @@ data class TvStatus(
 
 class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = SettingsRepository(app)
-    private val clientName = "tex-TV Remote (${Build.MODEL})"
+    private val clientName = "${app.getString(R.string.app_name)} (${Build.MODEL})"
 
     val settings: StateFlow<Settings?> = repo.settings
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -189,6 +189,11 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     // ── Commands ────────────────────────────────────────────────────────────
 
     fun press(key: TvKey) = withBackend { it.press(key) }
+
+    fun irPower() {
+        if (settings.value?.route != Route.HOME_ASSISTANT) return
+        withBackend { (it as HomeAssistantRemote).irPower() }
+    }
 
     fun longPress(key: TvKey) = withBackend { it.longPress(key) }
 
@@ -487,7 +492,10 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
-private fun HaConfig.trimmed() = HaConfig(url.trim(), token.trim(), entityId.trim(), mediaEntityId.trim())
+private fun HaConfig.trimmed() = copy(
+    url = url.trim(), token = token.trim(), entityId = entityId.trim(),
+    mediaEntityId = mediaEntityId.trim(), irPowerEntityId = irPowerEntityId.trim(),
+)
 
 private const val TILE_REFRESH_MS = 5_000L
 

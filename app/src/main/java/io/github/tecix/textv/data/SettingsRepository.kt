@@ -46,6 +46,7 @@ class SettingsRepository(private val context: Context) {
         val haToken = stringPreferencesKey("ha_token")
         val haEntity = stringPreferencesKey("ha_entity")
         val haMediaEntity = stringPreferencesKey("ha_media_entity")
+        val haIrPowerEntity = stringPreferencesKey("ha_ir_power_entity")
         val captionMacro = stringPreferencesKey("caption_macro")
         val volumeKeys = booleanPreferencesKey("volume_keys")
         val haptics = booleanPreferencesKey("haptics")
@@ -57,7 +58,7 @@ class SettingsRepository(private val context: Context) {
             route = p[Keys.route]?.let { runCatching { Route.valueOf(it) }.getOrNull() } ?: Route.DIRECT,
             tvs = decodeTvs(p[Keys.tvs]),
             selectedHost = p[Keys.selected],
-            ha = HaConfig(p[Keys.haUrl] ?: "", p[Keys.haToken] ?: "", p[Keys.haEntity] ?: "", p[Keys.haMediaEntity] ?: ""),
+            ha = HaConfig(p[Keys.haUrl] ?: "", p[Keys.haToken] ?: "", p[Keys.haEntity] ?: "", p[Keys.haMediaEntity] ?: "", p[Keys.haIrPowerEntity] ?: ""),
             volumeKeys = p[Keys.volumeKeys] ?: true,
             haptics = p[Keys.haptics] ?: true,
             dynamicColor = p[Keys.dynamicColor] ?: true,
@@ -85,6 +86,7 @@ class SettingsRepository(private val context: Context) {
         it[Keys.haToken] = config.token.trim()
         it[Keys.haEntity] = config.entityId.trim()
         it[Keys.haMediaEntity] = config.mediaEntityId.trim()
+        it[Keys.haIrPowerEntity] = config.irPowerEntityId.trim()
     }
 
     suspend fun setCaptionMacro(macro: String) = edit { it[Keys.captionMacro] = macro.trim() }

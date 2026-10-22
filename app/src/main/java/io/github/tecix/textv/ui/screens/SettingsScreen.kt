@@ -48,11 +48,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import io.github.tecix.textv.HaState
+import io.github.tecix.textv.R
 import io.github.tecix.textv.TvKey
 import io.github.tecix.textv.data.DEFAULT_CAPTION_MACRO
 import io.github.tecix.textv.data.Settings
@@ -77,13 +79,14 @@ fun SettingsScreen(
     var token by remember { mutableStateOf(settings.ha.token) }
     var entity by remember { mutableStateOf(settings.ha.entityId.ifEmpty { "remote." }) }
     var mediaEntity by remember { mutableStateOf(settings.ha.mediaEntityId) }
+    var irPowerEntity by remember { mutableStateOf(settings.ha.irPowerEntityId) }
     var macro by remember { mutableStateOf(settings.captionMacro) }
     var showToken by remember { mutableStateOf(false) }
     var testing by remember { mutableStateOf(false) }
     var testResult by remember { mutableStateOf<Result<String>?>(null) }
     var confirmForget by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val draft = HaConfig(url, token, entity, mediaEntity)
+    val draft = HaConfig(url, token, entity, mediaEntity, irPowerEntity)
     val dirty = draft != settings.ha
 
     Scaffold(
@@ -151,6 +154,16 @@ fun SettingsScreen(
                             placeholder = { Text(draft.mediaPlayer) },
                             supportingText = { Text("Leave empty to use ${draft.mediaPlayer}. Turn on screencap in the integration's options for the screenshot.") },
                             singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+
+                        OutlinedTextField(
+                            value = irPowerEntity, onValueChange = { irPowerEntity = it; testResult = null },
+                            label = { Text("IR power entity (optional)") },
+                            placeholder = { Text("script.tv_ir_power") },
+                            supportingText = { Text("Choose a script or button entity that sends your TV's IR power command. Tap IR Power on the remote to run it.") },
+                            singleLine = true,
+                            isError = irPowerEntity.isNotBlank() && !Regex("(?:script|button)\\.[a-z0-9_]+").matches(irPowerEntity.trim()),
                             modifier = Modifier.fillMaxWidth(),
                         )
 
@@ -262,7 +275,7 @@ fun SettingsScreen(
                 }
 
                 Text(
-                    "tex-TV Remote · Direct uses the Android TV Remote protocol v2 (ports 6466/6467)",
+                    "${stringResource(R.string.app_name)} · Direct uses the Android TV Remote protocol v2 (ports 6466/6467)",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 8.dp),
