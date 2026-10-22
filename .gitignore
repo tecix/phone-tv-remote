@@ -10,3 +10,5 @@ local.properties
 captures/
 .vscode/
 .DS_Store
+keystore.properties
+*.jks

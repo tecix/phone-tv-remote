@@ -24,12 +24,18 @@ A phone remote for Google TV / Android TV, built with Kotlin, Jetpack Compose an
 | Quick launch | YouTube, Web Video Caster, AirReceiver, VLC |
 | Phone | Volume keys control the TV, haptics, dynamic colour, light/dark |
 
+## Install
+
+Download the APK from the [latest release](https://github.com/tecix/phone-tv-remote/releases/latest) and open it on the phone
+(allow installing from your browser or file manager when asked). Needs Android 8.0+ on a 64-bit ARM phone (arm64-v8a).
+
 ## Build
 
 ```sh
 export JAVA_HOME=~/Android/jdk17
 ./gradlew installDebug          # build and install on the connected phone
 ./gradlew testDebugUnitTest     # protocol, macro and screenshot tests
+./gradlew assembleRelease       # arm64-v8a, signed if keystore.properties exists
 ```
 
 minSdk 26 · targetSdk 36 · compileSdk 37. Details in [SUMMARY.md](SUMMARY.md), progress in [STATUS.md](STATUS.md).

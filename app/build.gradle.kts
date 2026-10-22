@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -15,8 +17,26 @@ android {
         versionName = "1.0.0"
     }
 
+    // Release signing key: keystore.properties (gitignored) next to settings.gradle.kts.
+    // Without it, assembleRelease still builds, just unsigned.
+    val keystoreFile = rootProject.file("keystore.properties")
+    if (keystoreFile.exists()) {
+        val props = Properties().apply { keystoreFile.inputStream().use { load(it) } }
+        signingConfigs {
+            create("release") {
+                storeFile = file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfigs.findByName("release")?.let { signingConfig = it }
+            // Release APKs target 64-bit ARM phones only (arm64-v8a / ARMv8).
+            ndk { abiFilters += "arm64-v8a" }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
