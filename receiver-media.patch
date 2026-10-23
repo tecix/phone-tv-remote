@@ -1,0 +1,209 @@
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -1,8 +1,8 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+     package="com.tinytv.receiver"
+-    android:versionCode="13"
+-    android:versionName="1.12">
++    android:versionCode="14"
++    android:versionName="1.13">
+ 
+     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="22" />
+ 
+@@ -39,6 +39,13 @@
+             android:excludeFromRecents="true"
+             android:launchMode="singleInstance" />
+ 
++        <service android:name=".MediaNotificationListener" android:label="TinyTV media controls"
++            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
++            <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>
++        </service>
++        <receiver android:name=".MediaControlReceiver" android:exported="true" android:permission="android.permission.DUMP">
++            <intent-filter><action android:name="com.tinytv.receiver.MEDIA_CONTROL" /></intent-filter>
++        </receiver>
+         <service android:name=".ReceiverService" android:exported="false" />
+ 
+         <service
+--- a/src/com/tinytv/receiver/RemoteServer.java
++++ b/src/com/tinytv/receiver/RemoteServer.java
+@@ -129,7 +129,9 @@
+ 
+             final AtomicInteger pingId = new AtomicInteger();
+             while (true) {
+-                RemoteMessage msg = RemoteMessage.parseFrom(ProtoIO.read(in));
++                byte[] frame = ProtoIO.read(in);
++                if (new MediaControl(ctx).handle(frame, out, store.contains(peer))) continue;
++                RemoteMessage msg = RemoteMessage.parseFrom(frame);
+                 if (!msg.hasRemotePingResponse() && !msg.hasRemoteAppLinkLaunchRequest()) {
+                     Log.d(TAG, "remote: " + msg.toString().replace('\n', ' '));
+                 }
+--- a/src/com/tinytv/receiver/MediaControl.java
++++ b/src/com/tinytv/receiver/MediaControl.java
+@@ -0,0 +1,129 @@
++package com.tinytv.receiver;
++
++import android.content.ComponentName;
++import android.content.Context;
++import android.content.Intent;
++import android.media.MediaMetadata;
++import android.media.session.MediaController;
++import android.media.session.MediaSessionManager;
++import android.media.session.PlaybackState;
++import android.net.Uri;
++import android.os.SystemClock;
++import com.google.protobuf.CodedInputStream;
++import com.google.protobuf.CodedOutputStream;
++import org.json.JSONObject;
++import java.io.ByteArrayOutputStream;
++import java.io.OutputStream;
++import java.util.List;
++
++/** Optional TinyTV extension on the existing authenticated TLS connection. Standard packets are untouched. */
++final class MediaControl {
++    private final Context ctx;
++    MediaControl(Context context) { ctx = context.getApplicationContext(); }
++
++    boolean handle(byte[] frame, OutputStream out, boolean paired) throws Exception {
++        CodedInputStream input = CodedInputStream.newInstance(frame);
++        int tag;
++        while ((tag = input.readTag()) != 0) {
++            if (tag == ((9000 << 3) | 2)) {
++                if (!paired) throw new SecurityException("Phone is no longer paired");
++                String json = input.readStringRequireUtf8();
++                if (json.length() > 8192) throw new IllegalArgumentException("Media request too large");
++                JSONObject reply = execute(new JSONObject(json));
++                ByteArrayOutputStream payload = new ByteArrayOutputStream();
++                CodedOutputStream coded = CodedOutputStream.newInstance(payload);
++                coded.writeString(9001, reply.toString()); coded.flush();
++                synchronized (out) {
++                    CodedOutputStream framed = CodedOutputStream.newInstance(out);
++                    framed.writeUInt32NoTag(payload.size()); framed.writeRawBytes(payload.toByteArray()); framed.flush();
++                }
++                return true;
++            }
++            if (!input.skipField(tag)) break;
++        }
++        return false;
++    }
++
++    JSONObject execute(JSONObject request) {
++        JSONObject reply = new JSONObject();
++        try {
++            reply.put("version", 1).put("id", request.optString("id"));
++            String op = request.optString("op");
++            if ("capabilities".equals(op)) return reply.put("ok", true).put("media", true);
++            if ("open".equals(op)) {
++                String value = request.getString("uri");
++                if (value.length() > 4096 || hasControl(value)) throw new IllegalArgumentException();
++                Uri uri = Uri.parse(value);
++                if (!("http".equals(uri.getScheme()) || "https".equals(uri.getScheme()))
++                        || uri.getHost() == null || uri.getUserInfo() != null) throw new IllegalArgumentException();
++                String mime = request.optString("mime", "video/*");
++                if (!mime.matches("(?:audio|video)/[A-Za-z0-9.*+-]+|application/octet-stream")) throw new IllegalArgumentException();
++                ctx.startActivity(new Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime)
++                        .setPackage("org.videolan.vlc").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
++                return reply.put("ok", true);
++            }
++            if ("setup".equals(op)) {
++                ctx.startActivity(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
++                return reply.put("ok", true);
++            }
++            if (!"status".equals(op) && !"seek".equals(op)) throw new IllegalArgumentException();
++            MediaController controller = active();
++            if (controller == null) return reply.put("ok", true).put("playback", JSONObject.NULL);
++            JSONObject playback = sample(controller);
++            if ("seek".equals(op)) {
++                long position = request.getLong("position");
++                if (!request.getString("session").equals(playback.getString("session"))
++                        || !playback.getBoolean("seekable") || position < 0 || position > playback.getLong("duration")) {
++                    return reply.put("ok", false).put("error", "Media changed or seeking is unavailable");
++                }
++                controller.getTransportControls().seekTo(position);
++            }
++            return reply.put("ok", true).put("playback", playback);
++        } catch (SecurityException e) {
++            try { return reply.put("ok", false).put("accessRequired", true).put("error", "Enable TinyTV notification access on the TV for playback controls"); }
++            catch (Exception ignored) { return reply; }
++        } catch (Exception e) {
++            try { return reply.put("ok", false).put("error", "Media operation unavailable; check VLC installation and the TV media session"); }
++            catch (Exception ignored) { return reply; }
++        }
++    }
++
++    private MediaController active() {
++        MediaSessionManager manager = (MediaSessionManager) ctx.getSystemService(Context.MEDIA_SESSION_SERVICE);
++        List<MediaController> controllers = manager.getActiveSessions(new ComponentName(ctx, MediaNotificationListener.class));
++        MediaController fallback = null;
++        for (MediaController c : controllers) {
++            String p = c.getPackageName();
++            if (!(p.equals("org.videolan.vlc") || p.equals("com.instantbits.cast.receiver")
++                    || p.equals("org.smarttube.stable") || p.equals("org.smarttube.beta") || p.equals("app.smarttube.fdroid")
++                    || p.equals("com.teamsmart.videomanager.tv") || p.equals("com.liskovsoft.smarttubetv.beta"))) continue;
++            if (c.getPlaybackState() == null) continue;
++            if (c.getPlaybackState().getState() == PlaybackState.STATE_PLAYING) return c;
++            if (fallback == null) fallback = c;
++        }
++        return fallback;
++    }
++    private JSONObject sample(MediaController c) throws Exception {
++        PlaybackState state = c.getPlaybackState();
++        MediaMetadata meta = c.getMetadata();
++        long duration = meta == null ? 0 : Math.max(0, meta.getLong(MediaMetadata.METADATA_KEY_DURATION));
++        String title = meta == null ? c.getPackageName() : meta.getString(MediaMetadata.METADATA_KEY_TITLE);
++        if (title == null) title = c.getPackageName();
++        if (title.length() > 512) title = title.substring(0, 512);
++        String mediaId = meta == null ? "" : meta.getString(MediaMetadata.METADATA_KEY_MEDIA_ID);
++        if (mediaId == null) mediaId = "";
++        if (mediaId.length() > 512) mediaId = mediaId.substring(0, 512);
++        boolean playing = state.getState() == PlaybackState.STATE_PLAYING;
++        long position = Math.max(0, state.getPosition());
++        if (playing && state.getLastPositionUpdateTime() > 0) position += (long)
++                (Math.max(0, SystemClock.elapsedRealtime() - state.getLastPositionUpdateTime()) * state.getPlaybackSpeed());
++        if (duration > 0) position = Math.min(position, duration);
++        return new JSONObject().put("session", c.getPackageName() + ":" + c.getSessionToken().hashCode() + ":" + mediaId + ":" + duration + ":" + title)
++                .put("title", title).put("position", position).put("duration", duration).put("playing", playing)
++                .put("seekable", duration > 0 && (state.getActions() & PlaybackState.ACTION_SEEK_TO) != 0);
++    }
++    private static boolean hasControl(String s) {
++        for (int i = 0; i < s.length(); i++) if (Character.isISOControl(s.charAt(i))) return true;
++        return false;
++    }
++}
+--- a/src/com/tinytv/receiver/MediaControlReceiver.java
++++ b/src/com/tinytv/receiver/MediaControlReceiver.java
+@@ -0,0 +1,19 @@
++package com.tinytv.receiver;
++
++import android.content.BroadcastReceiver;
++import android.content.Context;
++import android.content.Intent;
++import android.util.Base64;
++import org.json.JSONObject;
++
++/** Only callers holding DUMP (ADB/system) may reach this manifest-protected receiver. */
++public final class MediaControlReceiver extends BroadcastReceiver {
++    @Override public void onReceive(Context context, Intent intent) {
++        try {
++            String encoded = intent.getStringExtra("request");
++            if (encoded == null || encoded.length() > 12000) return;
++            JSONObject response = new MediaControl(context).execute(new JSONObject(new String(Base64.decode(encoded, Base64.DEFAULT), "UTF-8")));
++            setResultData("TEXTV_MEDIA=" + Base64.encodeToString(response.toString().getBytes("UTF-8"), Base64.NO_WRAP));
++        } catch (Exception ignored) { setResultCode(-1); }
++    }
++}
+--- a/src/com/tinytv/receiver/MediaNotificationListener.java
++++ b/src/com/tinytv/receiver/MediaNotificationListener.java
+@@ -0,0 +1,3 @@
++package com.tinytv.receiver;
++/** User-enabled notification access permits Android's MediaSessionManager API. */
++public final class MediaNotificationListener extends android.service.notification.NotificationListenerService {}
+--- a/tests/com/tinytv/receiver/MediaControl.java
++++ b/tests/com/tinytv/receiver/MediaControl.java
+@@ -0,0 +1,6 @@
++package com.tinytv.receiver;
++/** Existing JVM AppLink tests isolate the optional Android MediaSession extension. */
++final class MediaControl {
++    MediaControl(android.content.Context context) {}
++    boolean handle(byte[] frame, java.io.OutputStream out, boolean paired) { return false; }
++}

@@ -1,57 +1,58 @@
-# TV Remote: Google, HA — Status
+# Rich TV Remote 2.0 status
 
-_Last updated: 2026-10-23_
+Last updated: 2026-10-24. **Read [HANDOFF.md](HANDOFF.md) to resume.**
 
-## Done
+## Implemented and installed
 
-- [x] Project setup: Compose + Material 3 Expressive (material3 1.5.0-beta01), AGP 9.4.1, SDK 37
-- [x] Direct: certificate, pairing, remote control, reconnect with backoff
-- [x] Home Assistant: keys, text, long press, app launch, connection test in Settings
-- [x] mDNS discovery, saved TVs (select / rename / re-pair / remove), add by IP
-- [x] Remote screen, keyboard sheet, settings screen, pairing dialog
-- [x] Phone volume keys → TV, haptics, dynamic color, dark mode
-- [x] Macro actions: unlimited named key sequences with add/edit/delete; defaults Captions (`DOWN RIGHT*4 OK BACK`) and 1.5× speed (`S` toggle)
-- [x] Quick launch: YouTube, Web Video Caster, AirReceiver, VLC
-- [x] HA wide tile: TV screenshot background, current app, uptime, refresh
-- [x] Tests passing: protocol (certificate, protobuf, framing, pairing digest matches the Python
-      app), macro parser, uptime format, 6 screenshot renders
+- Version **2.0**, Android version code **2**, installed with settings/pairing preserved.
+- Main-screen **Stop TV streaming** and notification **Stop streaming** now cancel pending jobs and send a real stop to the original DLNA/VLC destination, independently of Activity/service lifetime. TV failures remain retryable.
+- The selected DLNA receiver is saved for the app session and shown beneath the top bar with **Disconnect DLNA**. Normal file shares reuse it; explicit refresh or a failed endpoint triggers discovery. Stop keeps the receiver, Disconnect clears it.
 
-## Verified on real hardware
+- Picking/sharing a new file during an active/preparing DLNA/VLC share automatically cancels and stops the old transfer, awaits its cleanup, and plays the new one on the selected destination. Rapid replacements suppress stale commands/errors; the first share retains its destination panel. Signed update installed on the phone with data/pairing preserved.
 
-| Check | Result |
-|---|---|
-| App runs on Xiaomi Mi 10 | ✅ remote screen with dynamic color |
-| mDNS finds the TV ("TV638") | ✅ |
-| TLS connect + "needs pairing" detection + pairing start (TV shows a code) | ✅ |
-| HA: media_player attributes, screenshot (234 KB PNG), `cat /proc/uptime` via `adb_command` | ✅ (curl from the PC) |
-| TV package names for quick launch | ✅ read from the TV via HA |
+- Renamed to **Rich TV Remote**, source namespace `io.github.tecix.richtvremote`, Gradle project `rich-tv-remote`. Installed application ID retained for pairing/settings, old activity preserved as an alias.
+- Arrow-shaped **File** button opens the system file picker beside the resized SmartTube search bar. Expanded SEND/SEND_MULTIPLE and content VIEW filters; provider/filename MIME resolution supports audio/video containers and photos, with a choice for multi-file shares.
+- DLNA selection starts AirReceiver via the selected Direct/HA route before discovery, with startup retry. Existing TinyTV AppLink helper is reused; no companion update is needed. AirReceiver's saved DLNA switch must be on. Actual TV startup verification remains pending because TV ADB is offline.
 
-## Not yet verified
+- Existing Direct/HA remote, pairing, keyboard, macros, quick launch and HA tile retained.
+- Phone Vietnamese/English recognition via Android Activity Results; deterministic parsing and safely
+  encoded SmartTube search/play links; editable/manual fallback. No paid service, LLM or TV AI runtime.
+- Material 3 redesign: labeled current-mode top-bar control, merged media card, search bar and improved sheet.
+- Main and panel microphone recognition immediately sends SmartTube Search and closes on acceptance; rejection retains the query. Manual Search/Play keep their actions. Direct stays connected during recognition.
+- The old Assistant key now uses a Browser globe icon and label.
+- Language flags, selected checkmark/fill and persisted language.
+- Real media-session timeline/seek support with volume shown separately. Requires TV media access and
+  app-provided metadata/seek capability; unknown/live/unsupported media is not fabricated.
+- Share actual audio/video files or HTTP(S) media links to AirReceiver/DLNA or VLC on TV. SSDP receiver discovery and standard UPnP playback added; DLNA works independently of Direct/HA. Files are cached on the phone and served over local Wi-Fi with byte ranges, DLNA headers, foreground notification/Stop, CPU/Wi-Fi locks and four-hour expiry.
+- TinyTV Receiver upgraded to **1.13 (code 14)** in the companion checkout and on the TV. Standard
+  pairing/TLS/AppLinks remain unchanged; optional media extension and protected HA ADB broadcast added.
+- Signed phone release installed on the authorized phone, preserving data and pairing.
 
-- [ ] Finishing pairing with the TV's code, then key presses / volume feedback over Direct
-- [ ] The new build on the phone (installed, but the phone was locked)
-- [ ] HA mode end-to-end on the phone (HA URL/token must be entered in the phone app's Settings)
-- [ ] **Captions macro**: verify the updated default `DOWN RIGHT*4 OK BACK`
-      with a SmartTube video playing on the TV
-- [ ] 1.5× speed: needs SmartTube › Settings › General › "Remap S to speed toggle" on and 1.5×
-      picked once
-- [ ] Quick launch of Web Video Caster / AirReceiver / VLC from both modes
+## Remaining setup / verification
 
-## Known issues / limitations
+- **TV notification-listener access is NOT enabled.** User consent/setup remains pending. Use the phone's
+  **Enable playback access on TV**, then enable **TinyTV media controls** on the TV. Do not grant silently.
+- Actual timeline and seeking across SmartTube/Web Video Caster/VLC and Direct/HA need device verification.
+- End-to-end Drive sharing, locked-phone transfer and real TV Stop still need device verification. Notification Stop dispatch/cancellation and UI controls are covered by regression tests; the live DLNA endpoint currently refuses connections.
+- The user reported the earlier voice-search functionality worked. Do not confuse that report with
+  validation of these latest playback/file-sharing flows.
+- Older pairing-dialog/keyboard, captions macro calibration and quick-launch checks in project history
+  were not comprehensively retested on hardware in this session.
 
-- Pairing dialog: the keyboard covers the Pair button (✓ on the keyboard submits).
-- The HA tile needs screencap on in the Android Debug Bridge integration's options; otherwise the
-  tile shows a TV icon instead of a screenshot.
-- `adb_response` is shared with any other `androidtv.adb_command` caller; the uptime parser only
-  accepts output shaped like `/proc/uptime`.
-- The pairing-dialog screenshot test was dropped (dialog windows never go idle under Robolectric).
-- The release APK is unsigned; no signing config yet.
-- Low disk space on the dev machine (~1.4 GB free) ruled out an emulator.
+## Validation
 
-## Next steps
+- Phone: **71 tests passed**, zero failures/errors; signed release build, release lint (zero errors, 11 warnings) and R8 passed. Rich TV Remote installed successfully with `adb install -r`. Actual phone package queries verified generic/vendor sharing, multi-file sharing and Open with targets.
+- Receiver: full Android build passed; existing focused regression suite passed **162 assertions**.
+  Its Android MediaSession implementation is compiled, but isolated by a test double in the JVM suite.
+- Live TV: correct model, VLC installed, receiver/accessibility services running, media endpoint returns
+  the expected access-required response. No actual seek/playback success is claimed.
+- Light/dark/compact screenshot previews generated; `git diff --check` passed.
+- LAN discovery found **TV638_DVB-192[DLNA]** at `192.168.2.192:3500`; DLNA description advertises AVTransport:1. Actual video playback/smoothness is still unverified. Phone was locked during deployment; no unlock or notification-listener grant was attempted.
 
-1. Pair with the TV and test Direct keys and volume feedback.
-2. Enter HA settings on the phone; check the tile (screenshot, app name, uptime).
-3. Play a SmartTube video and calibrate the captions macro.
-4. Make the pairing dialog move above the keyboard.
-5. Optional: release signing config, app icon polish, first git commit (repo initialised, nothing committed).
+## Continuation notes
+
+- Version 2.0 source, tests and documentation form the requested release commit. Check `git log -1` and `git status --short` for current revision/state; companion source remains in its own checkout.
+- `receiver-media.patch` records changes already applied to `../tv-mods/tinytv-receiver`; do not blindly reapply.
+- Phone last ADB: `192.168.2.3:39669` (ephemeral). TV ADB: `192.168.2.192:5556`, disconnected after checks.
+- Release signing is configured; debug signature differs from the installed release. Do not uninstall or clear data.
+- APK snapshots/receiver rollback are saved in ignored `.local-backups/`; details and commands are in HANDOFF.md.

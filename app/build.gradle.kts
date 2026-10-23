@@ -6,15 +6,16 @@ plugins {
 }
 
 android {
-    namespace = "io.github.tecix.textv"
+    namespace = "io.github.tecix.richtvremote"
     compileSdk = 37
 
     defaultConfig {
+        // Keep the installed ID so updates retain settings, grants and pairing.
         applicationId = "io.github.tecix.textv"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "2.0"
     }
 
     // Release signing key: keystore.properties (gitignored) next to settings.gradle.kts.

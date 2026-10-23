@@ -1,4 +1,8 @@
-# TV Remote: Google, HA — Summary
+# Rich TV Remote — Summary
+
+**Current continuation state (2026-10-23): see [HANDOFF.md](HANDOFF.md) and [STATUS.md](STATUS.md).**
+The latest phone release and TinyTV Receiver 1.13 are installed; TV media access and
+playback/file-sharing device verification remain pending. All session changes are uncommitted.
 
 Android phone remote for Google TV / Android TV, built with Kotlin, Jetpack Compose and
 Material 3 Expressive. It drives the TV two ways, switchable at the top of the remote:
@@ -16,7 +20,9 @@ Material 3 Expressive. It drives the TV two ways, switchable at the top of the r
 | Pairing | TV shows a 6-char hex code; checksum verified on the phone before sending |
 | Remote | D-pad (hold to repeat), OK/Back/Home (hold for long press), power, input, assistant, menu, captions, TV settings, volume and channel rockers, media keys |
 | Keyboard | Bottom sheet; typed/deleted characters are sent as they change |
-| Live status (Direct) | Volume level (wavy bar), mute, current app, standby |
+| Live status / playback | Volume number, mute, app, standby; real playback timeline/seek via optional TinyTV media extension or capable HA media entity |
+| SmartTube search | Phone recognition (Vietnamese/English), editable query, explicit Search/Play, manual fallback; no paid APIs |
+| VLC sharing | Receive actual audio/video files or HTTP(S) media links; phone cache + local range server for files; explicit TV play |
 | HA tile | Wide 16:9 card: TV screenshot as background, current app name, TV uptime, refresh button |
 | Macro actions | Any number of named key sequences, editable on the remote or in Settings; defaults: **Captions** and **1.5× speed** |
 | Quick launch | YouTube, Web Video Caster, AirReceiver, VLC |
@@ -54,7 +60,7 @@ Material 3 Expressive. It drives the TV two ways, switchable at the top of the r
 ## Project layout
 
 ```
-app/src/main/java/io/github/tecix/textv/
+app/src/main/java/io/github/tecix/richtvremote/
   MainActivity.kt          screens, lifecycle, phone volume keys
   RemoteViewModel.kt       connection state, pairing, routing, HA tile polling
   TvKey.kt                 keycodes, macro parser, RemoteBackend interface
@@ -65,8 +71,10 @@ app/src/main/java/io/github/tecix/textv/
   data/MacroAction.kt       named key sequences, defaults, legacy migration, JSON storage
   ui/theme/Theme.kt        MaterialExpressiveTheme, expressive motion, fallback violet scheme
   ui/components/           RemoteButton (press/repeat/long-press, haptics)
-  ui/screens/              Remote, HaTileCard, Devices, Pairing, Keyboard, Settings
-app/src/test/              ProtocolTest, MacroTest, ScreenshotTest (Robolectric + Roborazzi)
+  voice/                   deterministic command parser, SmartTube Uri.Builder links
+  media/                   playback samples, receiver extension, share parsing/server/service
+  ui/screens/              Remote, HaTileCard, Devices, Pairing, Keyboard, Settings, VoiceSearch, PlaybackTimeline, SharedMedia
+app/src/test/              46 tests: protocol, macros, screenshots, voice, routing, sharing, media
 ```
 
 ## Build
@@ -80,7 +88,7 @@ app/src/test/              ProtocolTest, MacroTest, ScreenshotTest (Robolectric 
 
 ```sh
 export JAVA_HOME=~/Android/jdk17      # the system JDK 21 has no compiler
-./gradlew installDebug                # build + install on the connected phone
+./gradlew assembleDebug               # debug build; signature differs from installed release
 ./gradlew testDebugUnitTest           # unit tests + screenshots in app/build/outputs/roborazzi/
-./gradlew assembleRelease             # R8-minified, unsigned (~1.7 MB)
+./gradlew assembleRelease             # R8-minified; uses local release signing config
 ```

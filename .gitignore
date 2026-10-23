@@ -12,3 +12,6 @@ captures/
 .DS_Store
 keystore.properties
 *.jks
+
+# Local installed APK snapshots may contain embedded receiver identities.
+/.local-backups/

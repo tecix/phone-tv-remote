@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "tex-tv-remote"
+rootProject.name = "rich-tv-remote"
 include(":app")
