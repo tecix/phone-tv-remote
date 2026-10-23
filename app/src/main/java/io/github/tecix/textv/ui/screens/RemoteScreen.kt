@@ -48,7 +48,6 @@ import androidx.compose.material.icons.rounded.SettingsRemote
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.SmartDisplay
-import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.automirrored.rounded.VolumeDown
@@ -96,6 +95,7 @@ import io.github.tecix.textv.R
 import io.github.tecix.textv.TvKey
 import io.github.tecix.textv.TvStatus
 import io.github.tecix.textv.data.Route
+import io.github.tecix.textv.data.MacroAction
 import io.github.tecix.textv.data.Settings
 import io.github.tecix.textv.ui.components.HoldBehavior
 import io.github.tecix.textv.ui.components.RemoteButton
@@ -122,8 +122,9 @@ class RemoteActions(
     val openKeyboard: () -> Unit,
     val pair: () -> Unit,
     val retry: () -> Unit,
-    val smartTubeCaptions: () -> Unit,
-    val smartTubeSpeed: () -> Unit,
+    val runMacro: (String) -> Unit,
+    val saveMacro: (MacroAction) -> Unit,
+    val deleteMacro: (String) -> Unit,
     val refreshTile: () -> Unit,
     val irPower: () -> Unit,
 )
@@ -183,7 +184,7 @@ fun RemoteScreen(
                 NavKeys(actions, canSend)
                 VolumeRow(status, settings.route, actions, canSend)
                 MediaRow(actions, canSend)
-                SmartTubeRow(actions, canSend)
+                MacroActionsSection(settings.macroActions, canSend, actions.runMacro, actions.saveMacro, actions.deleteMacro)
                 QuickAppsRow(actions, canSend)
                 Spacer(Modifier.height(8.dp))
             }
@@ -600,18 +601,6 @@ private fun MediaRow(actions: RemoteActions, enabled: Boolean) {
         )
         RemoteIconButton(Icons.Rounded.FastForward, "Fast forward", { actions.press(TvKey.MEDIA_FAST_FORWARD) }, size = 56.dp, hold = HoldBehavior.Repeat, enabled = enabled)
         RemoteIconButton(Icons.Rounded.SkipNext, "Next", { actions.press(TvKey.MEDIA_NEXT) }, size = 52.dp, colors = clear, enabled = enabled)
-    }
-}
-
-@Composable
-private fun SmartTubeRow(actions: RemoteActions, enabled: Boolean) {
-    Section("SmartTube") {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
-            WideButton("Captions", Icons.Rounded.ClosedCaption, actions.smartTubeCaptions, enabled, Modifier.weight(1f),
-                ButtonGroupDefaults.connectedLeadingButtonShapes().let { ButtonDefaults.shapes(it.shape, it.pressedShape) })
-            WideButton("1.5× speed", Icons.Rounded.Speed, actions.smartTubeSpeed, enabled, Modifier.weight(1f),
-                ButtonGroupDefaults.connectedTrailingButtonShapes().let { ButtonDefaults.shapes(it.shape, it.pressedShape) })
-        }
     }
 }
 

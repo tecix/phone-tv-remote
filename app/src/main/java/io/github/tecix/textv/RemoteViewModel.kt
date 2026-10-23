@@ -5,6 +5,7 @@ import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.tecix.textv.data.Route
+import io.github.tecix.textv.data.MacroAction
 import io.github.tecix.textv.data.SavedTv
 import io.github.tecix.textv.data.Settings
 import io.github.tecix.textv.data.SettingsRepository
@@ -203,19 +204,19 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
 
     fun launchApp(packageName: String) = withBackend { it.launchApp(packageName) }
 
-    /** SmartTube: switch between 1x and the last picked speed (needs "Remap S to speed toggle"). */
-    fun smartTubeSpeed() = withBackend { it.press(TvKey.S) }
-
-    fun smartTubeCaptions() {
-        val keys = TvKey.parseMacro(settings.value?.captionMacro ?: "")
+    fun runMacro(id: String) {
+        val action = settings.value?.macroActions?.firstOrNull { it.id == id } ?: return
+        val keys = TvKey.parseMacro(action.sequence)
         if (keys == null) {
-            messages.trySend("The captions macro in Settings isn't valid")
+            messages.trySend("The key sequence for ${action.name} isn't valid")
             return
         }
         withBackend { it.pressSequence(keys) }
     }
 
-    fun setCaptionMacro(macro: String) = viewModelScope.launch { repo.setCaptionMacro(macro) }
+    fun saveMacro(action: MacroAction) = viewModelScope.launch { repo.saveMacro(action) }
+
+    fun deleteMacro(id: String) = viewModelScope.launch { repo.deleteMacro(id) }
 
     private inline fun withBackend(action: (RemoteBackend) -> Unit) {
         val backend = backend()

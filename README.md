@@ -8,7 +8,7 @@ A phone remote for Google TV / Android TV, built with Kotlin, Jetpack Compose an
 
 <p align="center">
   <img src="docs/screenshots/remote.webp" width="260" alt="Remote screen with the Home Assistant tile">
-  <img src="docs/screenshots/media-and-shortcuts.webp" width="260" alt="Volume, channel, media keys, SmartTube and quick launch">
+  <img src="docs/screenshots/media-and-shortcuts.webp" width="260" alt="Volume, channel, media keys, macros and quick launch">
   <img src="docs/screenshots/tv-picker.webp" width="260" alt="Saved TVs and mDNS discovery">
 </p>
 
@@ -20,7 +20,7 @@ A phone remote for Google TV / Android TV, built with Kotlin, Jetpack Compose an
 | Remote | D-pad with hold-to-repeat, OK/Back/Home with long press, power, input, menu, captions, settings, volume and channel rockers, media keys |
 | Keyboard | Bottom sheet; text is sent as you type |
 | Live status | Volume, mute, current app and standby (Direct); a 16:9 tile with a TV screenshot, app name and uptime (Home Assistant) |
-| SmartTube | **Captions** (configurable D-pad macro) and **1.5× speed** |
+| Macro actions | Add, rename, edit and delete any number of key sequences; defaults: **Captions** (`DOWN RIGHT*4 OK BACK`) and **1.5× speed** (`S`) |
 | Quick launch | YouTube, Web Video Caster, AirReceiver, VLC |
 | IR Power (Home Assistant) | Runs your IR power script or button; set its entity in Settings → Home Assistant |
 | Phone | Volume keys control the TV, haptics, dynamic colour, light/dark |

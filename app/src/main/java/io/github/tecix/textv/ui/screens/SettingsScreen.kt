@@ -55,8 +55,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import io.github.tecix.textv.HaState
 import io.github.tecix.textv.R
-import io.github.tecix.textv.TvKey
-import io.github.tecix.textv.data.DEFAULT_CAPTION_MACRO
+import io.github.tecix.textv.data.MacroAction
 import io.github.tecix.textv.data.Settings
 import io.github.tecix.textv.ha.HaConfig
 import kotlinx.coroutines.launch
@@ -72,7 +71,8 @@ fun SettingsScreen(
     onVolumeKeys: (Boolean) -> Unit,
     onHaptics: (Boolean) -> Unit,
     onDynamicColor: (Boolean) -> Unit,
-    onCaptionMacro: (String) -> Unit,
+    onSaveMacro: (MacroAction) -> Unit,
+    onDeleteMacro: (String) -> Unit,
     onForgetIdentity: () -> Unit,
 ) {
     var url by remember { mutableStateOf(settings.ha.url) }
@@ -80,7 +80,6 @@ fun SettingsScreen(
     var entity by remember { mutableStateOf(settings.ha.entityId.ifEmpty { "remote." }) }
     var mediaEntity by remember { mutableStateOf(settings.ha.mediaEntityId) }
     var irPowerEntity by remember { mutableStateOf(settings.ha.irPowerEntityId) }
-    var macro by remember { mutableStateOf(settings.captionMacro) }
     var showToken by remember { mutableStateOf(false) }
     var testing by remember { mutableStateOf(false) }
     var testResult by remember { mutableStateOf<Result<String>?>(null) }
@@ -211,46 +210,14 @@ fun SettingsScreen(
                     }
                 }
 
-                Group("SmartTube") {
-                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(
-                            "1.5× speed sends the S key. In SmartTube, turn on Settings › General › \"Remap S to speed toggle\" " +
-                                "and pick 1.5× once; the button then switches between 1× and 1.5×.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        val macroValid = TvKey.parseMacro(macro) != null
-                        OutlinedTextField(
-                            value = macro,
-                            onValueChange = { macro = it },
-                            label = { Text("Captions key sequence") },
-                            isError = !macroValid,
-                            supportingText = {
-                                Text(
-                                    if (macroValid) "Played from the SmartTube player. Keys: UP DOWN LEFT RIGHT OK BACK MENU, repeat with *n"
-                                    else "Unknown key. Use UP DOWN LEFT RIGHT OK BACK MENU, e.g. DOWN RIGHT*2 OK BACK"
-                                )
-                            },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            OutlinedButton(
-                                onClick = { macro = DEFAULT_CAPTION_MACRO },
-                                enabled = macro != DEFAULT_CAPTION_MACRO,
-                                shapes = ButtonDefaults.shapes(),
-                            ) { Text("Default") }
-                            Button(
-                                onClick = {
-                                    onCaptionMacro(macro)
-                                    scope.launch { snackbar.showSnackbar("Captions sequence saved") }
-                                },
-                                enabled = macroValid && macro.trim() != settings.captionMacro,
-                                shapes = ButtonDefaults.shapes(),
-                            ) { Text("Save") }
-                        }
-                    }
-                }
+                MacroActionsSection(
+                    actions = settings.macroActions,
+                    enabled = false,
+                    onRun = {},
+                    onSave = onSaveMacro,
+                    onDelete = onDeleteMacro,
+                    editorOnly = true,
+                )
 
                 Group("Controls") {
                     SwitchRow(

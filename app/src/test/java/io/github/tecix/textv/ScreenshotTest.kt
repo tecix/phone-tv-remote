@@ -49,7 +49,7 @@ class ScreenshotTest {
         ha = HaConfig("http://homeassistant.local:8123", "token", "remote.living_room_tv"),
         dynamicColor = false,
     )
-    private val noop = RemoteActions({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+    private val noop = RemoteActions({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
 
     private fun shot(name: String, content: @Composable () -> Unit) {
         // A focused text field's blinking cursor never lets the UI go idle.
@@ -123,7 +123,7 @@ class ScreenshotTest {
         SettingsScreen(
             settings, HaState.Ready("Living Room Philips TV"), SnackbarHostState(),
             onBack = {}, onSaveHa = {}, onTestHa = { Result.success("") },
-            onVolumeKeys = {}, onHaptics = {}, onDynamicColor = {}, onCaptionMacro = {}, onForgetIdentity = {},
+            onVolumeKeys = {}, onHaptics = {}, onDynamicColor = {}, onSaveMacro = {}, onDeleteMacro = {}, onForgetIdentity = {},
         )
     }
 }

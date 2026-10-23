@@ -1,6 +1,6 @@
 # TV Remote: Google, HA — Status
 
-_Last updated: 2026-10-22_
+_Last updated: 2026-10-23_
 
 ## Done
 
@@ -10,7 +10,7 @@ _Last updated: 2026-10-22_
 - [x] mDNS discovery, saved TVs (select / rename / re-pair / remove), add by IP
 - [x] Remote screen, keyboard sheet, settings screen, pairing dialog
 - [x] Phone volume keys → TV, haptics, dynamic color, dark mode
-- [x] SmartTube row: Captions (key macro) and 1.5× speed (`S` toggle)
+- [x] Macro actions: unlimited named key sequences with add/edit/delete; defaults Captions (`DOWN RIGHT*4 OK BACK`) and 1.5× speed (`S` toggle)
 - [x] Quick launch: YouTube, Web Video Caster, AirReceiver, VLC
 - [x] HA wide tile: TV screenshot background, current app, uptime, refresh
 - [x] Tests passing: protocol (certificate, protobuf, framing, pairing digest matches the Python
@@ -31,7 +31,7 @@ _Last updated: 2026-10-22_
 - [ ] Finishing pairing with the TV's code, then key presses / volume feedback over Direct
 - [ ] The new build on the phone (installed, but the phone was locked)
 - [ ] HA mode end-to-end on the phone (HA URL/token must be entered in the phone app's Settings)
-- [ ] **Captions macro**: the default `DOWN RIGHT*2 OK BACK` is a guess; it needs calibrating
+- [ ] **Captions macro**: verify the updated default `DOWN RIGHT*4 OK BACK`
       with a SmartTube video playing on the TV
 - [ ] 1.5× speed: needs SmartTube › Settings › General › "Remap S to speed toggle" on and 1.5×
       picked once

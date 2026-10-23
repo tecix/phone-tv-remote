@@ -132,8 +132,9 @@ private fun App(vm: RemoteViewModel) {
                     openKeyboard = { keyboard = true },
                     pair = { s.selectedTv?.let(vm::startPairing) },
                     retry = vm::retryDirect,
-                    smartTubeCaptions = vm::smartTubeCaptions,
-                    smartTubeSpeed = vm::smartTubeSpeed,
+                    runMacro = vm::runMacro,
+                    saveMacro = { vm.saveMacro(it) },
+                    deleteMacro = { vm.deleteMacro(it) },
                     refreshTile = vm::refreshTile,
                     irPower = vm::irPower,
                 ),
@@ -169,7 +170,8 @@ private fun App(vm: RemoteViewModel) {
                 onVolumeKeys = { vm.setVolumeKeys(it) },
                 onHaptics = { vm.setHaptics(it) },
                 onDynamicColor = { vm.setDynamicColor(it) },
-                onCaptionMacro = { vm.setCaptionMacro(it) },
+                onSaveMacro = { vm.saveMacro(it) },
+                onDeleteMacro = { vm.deleteMacro(it) },
                 onForgetIdentity = vm::forgetIdentity,
             )
         }

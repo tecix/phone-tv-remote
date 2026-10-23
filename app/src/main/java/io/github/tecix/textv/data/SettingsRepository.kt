@@ -25,14 +25,10 @@ data class Settings(
     val volumeKeys: Boolean = true,
     val haptics: Boolean = true,
     val dynamicColor: Boolean = true,
-    /** Keys that turn SmartTube's captions on or off from the player (see [TvKey.parseMacro]). */
-    val captionMacro: String = DEFAULT_CAPTION_MACRO,
+    val macroActions: List<MacroAction> = defaultMacroActions(),
 ) {
     val selectedTv get() = tvs.firstOrNull { it.host == selectedHost }
 }
-
-// SmartTube has no captions key: open the player bar, walk to the CC button, click it, hide the bar.
-const val DEFAULT_CAPTION_MACRO = "DOWN RIGHT*2 OK BACK"
 
 private val Context.dataStore by preferencesDataStore("settings")
 
@@ -48,6 +44,7 @@ class SettingsRepository(private val context: Context) {
         val haMediaEntity = stringPreferencesKey("ha_media_entity")
         val haIrPowerEntity = stringPreferencesKey("ha_ir_power_entity")
         val captionMacro = stringPreferencesKey("caption_macro")
+        val macroActions = stringPreferencesKey("macro_actions")
         val volumeKeys = booleanPreferencesKey("volume_keys")
         val haptics = booleanPreferencesKey("haptics")
         val dynamicColor = booleanPreferencesKey("dynamic_color")
@@ -62,7 +59,7 @@ class SettingsRepository(private val context: Context) {
             volumeKeys = p[Keys.volumeKeys] ?: true,
             haptics = p[Keys.haptics] ?: true,
             dynamicColor = p[Keys.dynamicColor] ?: true,
-            captionMacro = p[Keys.captionMacro] ?: DEFAULT_CAPTION_MACRO,
+            macroActions = decodeMacroActions(p[Keys.macroActions], p[Keys.captionMacro]),
         )
     }
 
@@ -89,7 +86,21 @@ class SettingsRepository(private val context: Context) {
         it[Keys.haIrPowerEntity] = config.irPowerEntityId.trim()
     }
 
-    suspend fun setCaptionMacro(macro: String) = edit { it[Keys.captionMacro] = macro.trim() }
+    suspend fun saveMacro(action: MacroAction) {
+        val trimmed = action.copy(name = action.name.trim(), sequence = action.sequence.trim())
+        require(trimmed.isValid) { "Enter a name and a valid key sequence" }
+        edit { p ->
+            val actions = decodeMacroActions(p[Keys.macroActions], p[Keys.captionMacro]).toMutableList()
+            val index = actions.indexOfFirst { it.id == trimmed.id }
+            if (index < 0) actions.add(trimmed) else actions[index] = trimmed
+            p[Keys.macroActions] = encodeMacroActions(actions)
+        }
+    }
+
+    suspend fun deleteMacro(id: String) = edit { p ->
+        val actions = decodeMacroActions(p[Keys.macroActions], p[Keys.captionMacro])
+        p[Keys.macroActions] = encodeMacroActions(actions.filterNot { it.id == id })
+    }
 
     suspend fun setVolumeKeys(enabled: Boolean) = edit { it[Keys.volumeKeys] = enabled }
 

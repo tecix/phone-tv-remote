@@ -18,7 +18,7 @@ Material 3 Expressive. It drives the TV two ways, switchable at the top of the r
 | Keyboard | Bottom sheet; typed/deleted characters are sent as they change |
 | Live status (Direct) | Volume level (wavy bar), mute, current app, standby |
 | HA tile | Wide 16:9 card: TV screenshot as background, current app name, TV uptime, refresh button |
-| SmartTube | **Captions** (configurable D-pad macro) and **1.5× speed** (`S` key toggle) |
+| Macro actions | Any number of named key sequences, editable on the remote or in Settings; defaults: **Captions** and **1.5× speed** |
 | Quick launch | YouTube, Web Video Caster, AirReceiver, VLC |
 | Phone integration | Volume keys control the TV, haptics, dynamic (wallpaper) color, light/dark |
 
@@ -43,10 +43,12 @@ Material 3 Expressive. It drives the TV two ways, switchable at the top of the r
   - uptime: `androidtv.adb_command` → `cat /proc/uptime`, read back from `adb_response`
     (every 10 min; the boot time is kept so the display ticks locally)
 
-### SmartTube
-- SmartTube has no key for captions (checked its `PlayerKeyTranslator` / `PlayerUIController`),
-  so **Captions** plays a key sequence, default `DOWN RIGHT*2 OK BACK`, editable in Settings.
-- **1.5× speed** sends `KEYCODE_S`; with SmartTube's "Remap S to speed toggle" on, it toggles
+### Macro actions
+- Add, rename, edit or delete any number of named key sequences from the remote or Settings.
+- Sequences work in both Direct and Home Assistant modes, using key names and `*n` repeats.
+- **Captions** defaults to `DOWN RIGHT*4 OK BACK`. Existing custom captions sequences migrate;
+  the previous default updates to the new sequence. Deleting all actions leaves an empty list.
+- **1.5× speed** defaults to `S`; with SmartTube's "Remap S to speed toggle" on, it toggles
   between 1× and the last speed picked (set 1.5× once).
 
 ## Project layout
@@ -59,7 +61,8 @@ app/src/main/java/io/github/tecix/textv/
   direct/                  Proto, ClientIdentity (certificate), RemoteV2 (pairing + remote)
   ha/HomeAssistantRemote.kt  HaHttp, HomeAssistantRemote (keys), HomeAssistantStatus (tile)
   discovery/TvDiscovery.kt mDNS discovery
-  data/SettingsRepository.kt DataStore settings (TVs, route, HA config, macro, toggles)
+  data/SettingsRepository.kt DataStore settings (TVs, route, HA config, macros, toggles)
+  data/MacroAction.kt       named key sequences, defaults, legacy migration, JSON storage
   ui/theme/Theme.kt        MaterialExpressiveTheme, expressive motion, fallback violet scheme
   ui/components/           RemoteButton (press/repeat/long-press, haptics)
   ui/screens/              Remote, HaTileCard, Devices, Pairing, Keyboard, Settings
