@@ -41,7 +41,7 @@ Last updated: 2026-10-24. **Read [HANDOFF.md](HANDOFF.md) to resume.**
 
 ## Validation
 
-- Phone: **71 tests passed**, zero failures/errors; signed release build, release lint (zero errors, 11 warnings) and R8 passed. Rich TV Remote installed successfully with `adb install -r`. Actual phone package queries verified generic/vendor sharing, multi-file sharing and Open with targets.
+- Phone: **80 tests passed**, zero failures/errors; signed release build, release lint (zero errors, 11 warnings) and R8 passed. Rich TV Remote installed successfully with `adb install -r`. Actual phone package queries verified generic/vendor sharing, multi-file sharing and Open with targets.
 - Receiver: full Android build passed; existing focused regression suite passed **162 assertions**.
   Its Android MediaSession implementation is compiled, but isolated by a test double in the JVM suite.
 - Live TV: correct model, VLC installed, receiver/accessibility services running, media endpoint returns

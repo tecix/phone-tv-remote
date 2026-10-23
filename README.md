@@ -7,9 +7,9 @@ A phone remote for Google TV / Android TV, built with Kotlin, Jetpack Compose an
 - **Home Assistant**: `remote.send_command` through HA's Android Debug Bridge integration, for screens that only real key events can drive.
 
 <p align="center">
-  <img src="docs/screenshots/remote.webp" width="260" alt="Remote screen with the Home Assistant tile">
-  <img src="docs/screenshots/media-and-shortcuts.webp" width="260" alt="Volume, channel, media keys, macros and quick launch">
-  <img src="docs/screenshots/tv-picker.webp" width="260" alt="Saved TVs and mDNS discovery">
+  <a href="docs/screenshots/remote.webp"><img src="docs/screenshots/remote.webp" width="250" alt="Direct remote with playback timeline and File button"></a>
+  <a href="docs/screenshots/remote-ha.webp"><img src="docs/screenshots/remote-ha.webp" width="250" alt="Home Assistant remote and TV status"></a>
+  <a href="docs/screenshots/media-and-shortcuts.webp"><img src="docs/screenshots/media-and-shortcuts.webp" width="250" alt="Volume, channels, macro actions and quick launch"></a>
 </p>
 
 ## Features
@@ -26,10 +26,60 @@ A phone remote for Google TV / Android TV, built with Kotlin, Jetpack Compose an
 | IR Power (Home Assistant) | Runs your IR power script or button; set its entity in Settings → Home Assistant |
 | Phone | Volume keys control the TV, haptics, dynamic colour, light/dark |
 
+## Screenshots
+
+Rendered from the v2.0 app UI with sample TV and media data. Select an image to view it at full size. The system file picker, speech window and software keyboard depend on the phone.
+
+### TV setup
+
+| Your TVs | Add by IP | Pairing |
+| --- | --- | --- |
+| <a href="docs/screenshots/tv-picker.webp"><img src="docs/screenshots/tv-picker.webp" width="250" alt="Your TVs"></a> | <a href="docs/screenshots/add-tv.webp"><img src="docs/screenshots/add-tv.webp" width="250" alt="Add by IP"></a> | <a href="docs/screenshots/pairing.webp"><img src="docs/screenshots/pairing.webp" width="250" alt="Pairing"></a> |
+
+
+### Search, typing and macros
+
+| SmartTube search | Keyboard panel | Macro editor |
+| --- | --- | --- |
+| <a href="docs/screenshots/voice-search.webp"><img src="docs/screenshots/voice-search.webp" width="250" alt="SmartTube search"></a> | <a href="docs/screenshots/keyboard.webp"><img src="docs/screenshots/keyboard.webp" width="250" alt="Keyboard panel"></a> | <a href="docs/screenshots/macro-editor.webp"><img src="docs/screenshots/macro-editor.webp" width="250" alt="Macro editor"></a> |
+
+
+### DLNA and file sharing
+
+| Remembered DLNA receiver | Connection menu and Disconnect |
+| --- | --- |
+| <a href="docs/screenshots/dlna-session.webp"><img src="docs/screenshots/dlna-session.webp" width="250" alt="Remembered DLNA receiver"></a> | <a href="docs/screenshots/dlna-menu.webp"><img src="docs/screenshots/dlna-menu.webp" width="250" alt="Connection menu and Disconnect"></a> |
+
+| AirReceiver / DLNA sharing | VLC sharing |
+| --- | --- |
+| <a href="docs/screenshots/share-dlna.webp"><img src="docs/screenshots/share-dlna.webp" width="250" alt="AirReceiver / DLNA sharing"></a> | <a href="docs/screenshots/share-vlc.webp"><img src="docs/screenshots/share-vlc.webp" width="250" alt="VLC sharing"></a> |
+
+
+### Settings
+
+| Home Assistant settings | Phone controls and pairing settings | Settings in dark mode |
+| --- | --- | --- |
+| <a href="docs/screenshots/settings.webp"><img src="docs/screenshots/settings.webp" width="250" alt="Home Assistant settings"></a> | <a href="docs/screenshots/settings-controls.webp"><img src="docs/screenshots/settings-controls.webp" width="250" alt="Phone controls and pairing settings"></a> | <a href="docs/screenshots/settings-dark.webp"><img src="docs/screenshots/settings-dark.webp" width="250" alt="Settings in dark mode"></a> |
+
+<details>
+<summary>More previews: dark mode, compact text layout and pairing setup</summary>
+
+| Dark remote | Dark SmartTube search | Dark DLNA sharing |
+| --- | --- | --- |
+| <a href="docs/screenshots/remote-dark.webp"><img src="docs/screenshots/remote-dark.webp" width="250" alt="Dark remote"></a> | <a href="docs/screenshots/voice-search-dark.webp"><img src="docs/screenshots/voice-search-dark.webp" width="250" alt="Dark SmartTube search"></a> | <a href="docs/screenshots/share-dlna-dark.webp"><img src="docs/screenshots/share-dlna-dark.webp" width="250" alt="Dark DLNA sharing"></a> |
+
+| Pairing required | Compact search with larger text |
+| --- | --- |
+| <a href="docs/screenshots/remote-pairing-needed.webp"><img src="docs/screenshots/remote-pairing-needed.webp" width="250" alt="Pairing required"></a> | <a href="docs/screenshots/voice-search-compact.webp"><img src="docs/screenshots/voice-search-compact.webp" width="250" alt="Compact search with larger text"></a> |
+
+</details>
+
 ## Install
 
-Download the APK from the [latest release](https://github.com/tecix/phone-tv-remote/releases/latest) and open it on the phone
-(allow installing from your browser or file manager when asked). Needs Android 8.0+ on a 64-bit ARM phone (arm64-v8a).
+[Download Rich TV Remote 2.0 — signed ARM64 APK](https://github.com/tecix/phone-tv-remote/releases/download/v2.0/rich-tv-remote-v2.0-arm64-v8a.apk) · [Release notes and checksum](https://github.com/tecix/phone-tv-remote/releases/tag/v2.0)
+
+Open the APK on the phone and allow installation from your browser or file manager when asked.
+Requires Android 8.0+ on a 64-bit ARM phone (arm64-v8a). Install over the previous release to retain settings and TV pairing.
 
 ## Build
 
@@ -38,6 +88,13 @@ export JAVA_HOME=~/Android/jdk17
 ./gradlew installDebug          # build and install on the connected phone
 ./gradlew testDebugUnitTest     # protocol, macro and screenshot tests
 ./gradlew assembleRelease       # arm64-v8a, signed if keystore.properties exists
+```
+
+To refresh the screenshot gallery (requires `cwebp` from the WebP tools):
+
+```sh
+./gradlew testDebugUnitTest --tests 'io.github.tecix.richtvremote.*ScreenshotTest'
+python3 scripts/update-screenshots.py
 ```
 
 minSdk 26 · targetSdk 36 · compileSdk 37. Details in [SUMMARY.md](SUMMARY.md), progress in [STATUS.md](STATUS.md).

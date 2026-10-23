@@ -14,6 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureScreenRoboImage
 import io.github.tecix.richtvremote.data.Route
@@ -29,6 +34,7 @@ import io.github.tecix.richtvremote.ui.screens.RemoteActions
 import io.github.tecix.richtvremote.ui.screens.RemoteScreen
 import io.github.tecix.richtvremote.ui.screens.VoiceSearchSheet
 import io.github.tecix.richtvremote.ui.screens.SettingsScreen
+import io.github.tecix.richtvremote.ui.screens.KeyboardSheet
 import io.github.tecix.richtvremote.ui.theme.RichTvRemoteTheme
 import org.junit.Rule
 import org.junit.Test
@@ -67,6 +73,7 @@ class ScreenshotTest {
 
     @Composable
     private fun sharePanel() {
+        directPreview(dlnaRenderer)
         io.github.tecix.richtvremote.ui.screens.SharedMediaSheet(
             io.github.tecix.richtvremote.media.SharedMedia(android.net.Uri.parse("content://media/movie"), "video/mp4", "Shared video"),
             Route.DIRECT, false, false, {}, {}, destination = io.github.tecix.richtvremote.media.MediaDestination.DLNA,
@@ -79,7 +86,7 @@ class ScreenshotTest {
     @Config(qualifiers = "+night")
     fun shareDlnaDark() = shot("share_dlna_dark") { sharePanel() }
 
-    private fun shot(name: String, content: @Composable () -> Unit) {
+    private fun shot(name: String, beforeCapture: () -> Unit = {}, content: @Composable () -> Unit) {
         // A focused text field's blinking cursor never lets the UI go idle.
         compose.mainClock.autoAdvance = false
         compose.setContent {
@@ -88,7 +95,69 @@ class ScreenshotTest {
             }
         }
         compose.mainClock.advanceTimeBy(2_000)
+        // Scroll semantics need advancing frames; freeze again before the screenshot's idle check.
+        compose.mainClock.autoAdvance = true
+        beforeCapture()
+        compose.mainClock.autoAdvance = false
+        compose.mainClock.advanceTimeBy(500)
         captureScreenRoboImage("build/outputs/roborazzi/$name.png")
+    }
+
+    @Composable
+    private fun directPreview(receiver: io.github.tecix.richtvremote.media.DlnaRenderer? = null) {
+        RemoteScreen(settings, DirectState.Connected(tv, DeviceInfo("Philips", "PUS8808")), HaState.Unconfigured,
+            TvStatus(VolumeInfo(18, 60, false), true, "org.videolan.vlc",
+                MediaPlayback("vlc", "Shared video", 65_000, 300_000, false, true)), HaTile(), true, SnackbarHostState(), noop,
+            dlnaReceiver = receiver)
+    }
+
+    @Composable
+    private fun devicesPreview() {
+        DevicesScreen(settings.tvs, tv.host, listOf(DiscoveredTv("Kitchen Chromecast", "192.168.1.77")),
+            SnackbarHostState(), {}, {}, {}, { _, _ -> }, {})
+    }
+
+    @Composable
+    private fun settingsPreview() {
+        SettingsScreen(settings, HaState.Ready("Living Room Philips TV"), SnackbarHostState(),
+            {}, {}, { Result.success("") }, {}, {}, {}, {}, {}, {})
+    }
+
+    @Test fun remoteMediaAndShortcuts() = shot("remote_media_shortcuts", beforeCapture = {
+        compose.onNodeWithText("Quick launch").performScrollTo()
+    }) { directPreview() }
+
+    @Test fun dlnaConnectionMenu() = shot("dlna_connection_menu", beforeCapture = {
+        compose.onNodeWithText("DLNA · ${dlnaRenderer.name}").performClick()
+        compose.onNodeWithText("Disconnect DLNA").assertIsDisplayed()
+    }) {
+        RemoteScreen(settings, DirectState.Connected(tv, DeviceInfo("Philips", "PUS8808")), HaState.Unconfigured,
+            TvStatus(), HaTile(), true, SnackbarHostState(), noop, dlnaReceiver = dlnaRenderer)
+    }
+
+    @Test fun keyboard() = shot("keyboard", beforeCapture = {
+        compose.onNodeWithText("Text").performTextInput("Hello, TV!")
+    }) { directPreview(); KeyboardSheet({}, {}, {}, {}) }
+
+    @Test fun addTv() = shot("add_tv", beforeCapture = {
+        compose.onNodeWithText("Add by IP", useUnmergedTree = true).performClick()
+    }) { devicesPreview() }
+
+    @Test fun macroEditor() = shot("macro_editor", beforeCapture = {
+        compose.onNodeWithText("Captions").performScrollTo().performClick()
+    }) { settingsPreview() }
+
+    @Test fun settingsLight() = shot("settings") { settingsPreview() }
+
+    @Test fun settingsPhoneOptions() = shot("settings_phone", beforeCapture = {
+        compose.onNodeWithText("Reset pairing identity").performScrollTo()
+    }) { settingsPreview() }
+
+    @Test fun shareVlc() = shot("share_vlc") {
+        directPreview()
+        io.github.tecix.richtvremote.ui.screens.SharedMediaSheet(
+            io.github.tecix.richtvremote.media.SharedMedia(android.net.Uri.parse("content://media/movie"), "video/mp4", "Shared video.mp4"),
+            Route.DIRECT, true, false, {}, {}, destination = io.github.tecix.richtvremote.media.MediaDestination.VLC)
     }
 
     /** Stands in for a TV screenshot: a dusk-colored gradient with a "video" block. */
@@ -158,12 +227,14 @@ class ScreenshotTest {
     }
     @Test
     fun voiceSearch() = shot("voice_search") {
+        directPreview()
         VoiceSearchSheet("DIRECT", "vi-VN", {}, true, {}, { _, _ -> true }, startWithVoice = false)
     }
 
     @Test
     @Config(qualifiers = "+night")
     fun voiceSearchDark() = shot("voice_search_dark") {
+        directPreview()
         VoiceSearchSheet("DIRECT", "vi-VN", {}, true, {}, { _, _ -> true }, startWithVoice = false)
     }
 
@@ -171,6 +242,7 @@ class ScreenshotTest {
     @Config(qualifiers = "w320dp-h640dp-xhdpi")
     fun voiceSearchCompact() = shot("voice_search_compact") {
         CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale = 1.3f)) {
+            directPreview()
             VoiceSearchSheet("DIRECT", "vi-VN", {}, false, {}, { _, _ -> false }, startWithVoice = false)
         }
     }

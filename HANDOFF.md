@@ -46,13 +46,23 @@ for the exact current revision. Branch: `main`; origin: `tecix/phone-tv-remote`.
 - Playback timeline/seek uses actual app metadata/capabilities. Optional TinyTV media access
   is separate from DLNA. Unknown/live/nonseekable content is not fabricated.
 
+## README gallery and release
+
+Release page: https://github.com/tecix/phone-tv-remote/releases/tag/v2.0
+The signed phone APK is `rich-tv-remote-v2.0-arm64-v8a.apk`; SHA256SUMS accompanies it.
+README links 21 optimized WebP previews covering primary screens, panels, setup dialogs and
+light/dark/compact layouts. They use sample data, not private device contents. Regenerate with
+`./gradlew testDebugUnitTest --tests 'io.github.tecix.richtvremote.*ScreenshotTest'` then
+`python3 scripts/update-screenshots.py` (requires cwebp). Pairing uses a separate finite native
+looper render to avoid Espresso waiting indefinitely on its focused cursor; app behavior is unchanged.
+
 ## Validation and remaining device checks
 
-- Phone: **71 tests**, zero failures/errors. Signed release/R8 and release lint passed
+- Phone: **80 tests**, zero failures/errors. Signed release/R8 and release lint passed
   (zero errors, 11 existing warnings). `git diff --check` passed.
 - Coverage includes parsing/routing, protocol, SOAP/HTTP ranges, real notification action
   dispatch/removal, pending command cancellation, rapid replacement ordering, retry after
-  Stop failure, receiver reuse/disconnect/stale scans, UI controls and 12 screenshot renders.
+  Stop failure, receiver reuse/disconnect/stale scans, UI controls and 21 screenshot renders.
 - Main-screen DLNA session layout reviewed in `app/build/outputs/roborazzi/remote_dlna_session.png`.
 - The live TV DLNA endpoint at `192.168.2.192:3500` currently refuses connections. No Stop
   reached the TV during the latest probe; actual TV Stop/background playback remains unverified.
