@@ -149,6 +149,14 @@ class RemoteActions(
     val setupMediaAccess: () -> Unit = {},
     val pickMedia: () -> Unit = {},
     val disconnectDlna: () -> Unit = {},
+    val airPlaySetPlaying: (Boolean) -> Unit = {},
+    val airPlaySeek: (Long) -> Unit = {},
+    val airPlaySkip: (Long) -> Unit = {},
+    val airPlayStop: () -> Unit = {},
+    val airPlaySelectCaptions: (Int) -> Unit = {},
+    val airPlayCaptionsDelay: (Long) -> Unit = {},
+    val addSubtitleFile: () -> Unit = {},
+    val addSubtitleUrl: (String) -> Unit = {},
 )
 
 @Composable
@@ -166,6 +174,7 @@ fun RemoteScreen(
     onStopSharing: () -> Unit = {},
     stoppingStreaming: Boolean = false,
     dlnaReceiver: DlnaRenderer? = null,
+    airPlay: io.github.tecix.richtvremote.media.AirPlayNowPlaying? = null,
 ) {
     Scaffold(
         topBar = {
@@ -211,6 +220,7 @@ fun RemoteScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 ConnectionCard(settings, direct, ha, status, haTile, canSend, actions)
+                airPlay?.let { AirPlayCard(it, actions) }
                 if (mediaAccessRequired) TextButton(onClick = actions.setupMediaAccess) { Text("Enable playback access on TV") }
                 SmartTubeSearchEntry(actions)
                 if (sharingFile) TextButton(onClick = onStopSharing, enabled = !stoppingStreaming) {

@@ -12,10 +12,13 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
-/** Serves exactly one file at an unguessable path; supports VLC/DLNA HEAD and byte-range requests. */
-class SingleMediaServer(private val file: File, private val mime: String, address: InetAddress) : Closeable {
+/**
+ * Serves exactly one file at an unguessable path; supports VLC/DLNA HEAD and byte-range requests.
+ * [name] becomes the last path segment, which receivers show (e.g. as the subtitle track name).
+ */
+class SingleMediaServer(private val file: File, private val mime: String, address: InetAddress, name: String = "media") : Closeable {
     private val token = ByteArray(24).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(it) }
-    private val path = "/$token/media"
+    private val path = "/$token/" + name.replace(Regex("[^A-Za-z0-9._-]+"), "_").trim('_', '.').take(64).ifEmpty { "media" }
     private val checkedMime = mime.also { require(Regex("[a-zA-Z0-9.+-]+/[a-zA-Z0-9.+*-]+").matches(it)) }
     private val server = ServerSocket(0, 4, address)
     private val clients = ConcurrentHashMap.newKeySet<Socket>()

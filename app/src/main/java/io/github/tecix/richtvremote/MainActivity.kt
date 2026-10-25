@@ -129,6 +129,10 @@ private fun App(vm: RemoteViewModel) {
     val sharing by MediaShareService.state.collectAsStateWithLifecycle()
     val streamingPlayback by vm.streamingPlayback.collectAsStateWithLifecycle()
     val stoppingStreaming by vm.stoppingStreaming.collectAsStateWithLifecycle()
+    val airPlayReceivers by vm.airPlayReceivers.collectAsStateWithLifecycle()
+    val airPlayReceiver by vm.airPlayReceiver.collectAsStateWithLifecycle()
+    val airPlay by vm.airPlay.collectAsStateWithLifecycle()
+    val pendingCaptions by vm.pendingCaptions.collectAsStateWithLifecycle()
     val s = settings ?: return
 
     var screen by rememberSaveable { mutableStateOf(Screen.Remote) }
@@ -139,6 +143,10 @@ private fun App(vm: RemoteViewModel) {
     val context = LocalContext.current
     val mediaPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { vm.receiveShare(Intent(Intent.ACTION_VIEW).setDataAndType(it, "*/*")) }
+    }
+    // Subtitle MIME types vary by file manager (application/x-subrip, text/plain, octet-stream); the name is checked later.
+    val subtitlePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let(vm::addSubtitleFile)
     }
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         vm.playSharedMedia() // Sharing still works when notification permission is declined; Stop remains in the app.
@@ -164,6 +172,7 @@ private fun App(vm: RemoteViewModel) {
                 sharingFile = sharing is ShareState.Serving || sharing is ShareState.Preparing || streamingPlayback != null || shareBusy || stoppingStreaming,
                 stoppingStreaming = stoppingStreaming,
                 dlnaReceiver = renderer,
+                airPlay = airPlay,
                 onStopSharing = vm::stopSharing,
                 settings = s,
                 direct = direct,
@@ -176,6 +185,14 @@ private fun App(vm: RemoteViewModel) {
                     openVoice = { voiceAutoStart = true; voice = true },
                     pickMedia = { mediaPicker.launch(arrayOf("*/*")) },
                     disconnectDlna = vm::disconnectDlnaReceiver,
+                    airPlaySetPlaying = vm::airPlaySetPlaying,
+                    airPlaySeek = vm::airPlaySeek,
+                    airPlaySkip = vm::airPlaySkip,
+                    airPlayStop = vm::airPlayStop,
+                    airPlaySelectCaptions = vm::airPlaySelectCaptions,
+                    airPlayCaptionsDelay = vm::airPlayCaptionsDelay,
+                    addSubtitleFile = { subtitlePicker.launch(arrayOf("*/*")) },
+                    addSubtitleUrl = vm::addSubtitleUrl,
                     openVoiceText = { voiceAutoStart = false; voice = true },
                     seekTo = vm::seekTo,
                     setupMediaAccess = vm::setupMediaAccess,
@@ -244,7 +261,11 @@ private fun App(vm: RemoteViewModel) {
             onDestinationChange = vm::setMediaDestination,
             renderers = renderers, renderer = renderer, discovering = discoveringRenderers,
             onDiscover = { vm.discoverRenderers(force = true) }, onRendererChange = vm::selectRenderer,
-            choices = sharedChoices, onMediaChange = vm::selectSharedMedia)
+            choices = sharedChoices, onMediaChange = vm::selectSharedMedia,
+            airPlayReceivers = airPlayReceivers, airPlayReceiver = airPlayReceiver,
+            onAirPlayChange = vm::selectAirPlayReceiver, onDiscoverAirPlay = { vm.discoverAirPlay(force = true) },
+            subtitles = pendingCaptions, onAddSubtitle = { subtitlePicker.launch(arrayOf("*/*")) },
+            onRemoveSubtitle = vm::removePendingCaption)
     }
 
     if (voice) {

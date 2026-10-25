@@ -13,7 +13,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import org.json.JSONObject
 
-internal data class SharedPlayback(val destination: MediaDestination, val renderer: DlnaRenderer?, val settings: Settings)
+internal data class SharedPlayback(val destination: MediaDestination, val renderer: DlnaRenderer?, val settings: Settings,
+    val airplay: AirPlayReceiver? = null)
 
 /** Keeps the original destination available when the activity is backgrounded or recreated. */
 internal object MediaStreaming {
@@ -32,6 +33,8 @@ internal object MediaStreaming {
             stopTv = { target ->
                 if (target.destination == MediaDestination.DLNA) {
                     DlnaController.stop(requireNotNull(target.renderer) { "No DLNA receiver selected" })
+                } else if (target.destination == MediaDestination.AIRPLAY) {
+                    AirPlaySession.stop(requireNotNull(target.airplay) { "No AirPlay receiver selected" })
                 } else withContext(Dispatchers.IO) {
                     // Use the saved destination, not whatever route is currently selected on screen.
                     if (target.settings.route == Route.HOME_ASSISTANT) {

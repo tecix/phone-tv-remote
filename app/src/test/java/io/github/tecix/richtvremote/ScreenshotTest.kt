@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -81,6 +82,34 @@ class ScreenshotTest {
     }
 
     @Test fun shareDlna() = shot("share_dlna") { sharePanel() }
+
+    private val airPlayTv = io.github.tecix.richtvremote.media.AirPlayReceiver("TV638", "192.168.2.192")
+
+    @Test fun remoteAirPlay() = shot("remote_airplay") {
+        RemoteScreen(settings, DirectState.Connected(tv, DeviceInfo("Philips", "PUS8808")), HaState.Unconfigured,
+            TvStatus(), HaTile(), true, SnackbarHostState(), noop, sharingFile = true,
+            airPlay = io.github.tecix.richtvremote.media.AirPlayNowPlaying(airPlayTv, "Shared video.mkv",
+                io.github.tecix.richtvremote.media.AirPlayStatus(io.github.tecix.richtvremote.media.AirPlayStatus.State.PLAYING,
+                    1_812_000, 3_410_000, listOf("movie.vi.srt", "movie.en.vtt"), 0, -500, extended = true)))
+    }
+
+    @Test fun airPlaySubtitles() = shot("airplay_subtitles", beforeCapture = {
+        compose.onNodeWithContentDescription("Subtitles").performClick()
+    }) {
+        RemoteScreen(settings, DirectState.Connected(tv, DeviceInfo("Philips", "PUS8808")), HaState.Unconfigured,
+            TvStatus(), HaTile(), true, SnackbarHostState(), noop,
+            airPlay = io.github.tecix.richtvremote.media.AirPlayNowPlaying(airPlayTv, "Shared video.mkv",
+                io.github.tecix.richtvremote.media.AirPlayStatus(io.github.tecix.richtvremote.media.AirPlayStatus.State.PAUSED,
+                    65_000, 300_000, listOf("movie.vi.srt", "movie.en.vtt"), 1, 500, extended = true)))
+    }
+
+    @Test fun shareAirPlay() = shot("share_airplay") {
+        directPreview()
+        io.github.tecix.richtvremote.ui.screens.SharedMediaSheet(
+            io.github.tecix.richtvremote.media.SharedMedia(android.net.Uri.parse("https://nebula.example/hls/1080p/playlist.jpg"), "video/*", "nebula.example"),
+            Route.DIRECT, true, false, {}, {}, destination = io.github.tecix.richtvremote.media.MediaDestination.AIRPLAY,
+            airPlayReceivers = listOf(airPlayTv), airPlayReceiver = airPlayTv)
+    }
 
     @Test
     @Config(qualifiers = "+night")

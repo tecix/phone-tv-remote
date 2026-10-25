@@ -2,6 +2,24 @@
 
 Last updated: 2026-10-24. **Read [HANDOFF.md](HANDOFF.md) to resume.**
 
+## 2.1 (2026-10-26, installed on the Mi 10)
+
+- **AirPlay sender**, now the default in Play on TV (phone files and http(s) links). Receivers come from
+  mDNS `_airplay._tcp` (host and port, so TinyTV on 7000 and AirReceiver on 7001 are both listed; TinyTV is
+  preselected), with the selected TV's port 7000 as a fallback. The AirPlay card on the remote screen has a
+  timeline with seek, play/pause, ±10 s, stop and a subtitle sheet: pick a track or Off, ±0.5 s delay, add
+  .srt/.vtt from the phone (served over Wi-Fi) or by link. Subtitles can also be attached before Play.
+  The track list needs TinyTV Receiver 2.0; other AirPlay v1 receivers get play, seek and stop only.
+- Shared links whose names end in .jpg/.png are treated as video unless the sharing app says image/*.
+- **"Open with" for web video links** (Web Video Caster's *Open in another app*, browsers): VIEW filter for
+  http(s) with video/*, audio/*, HLS (`application/x-mpegURL`, `vnd.apple.mpegurl`), DASH and octet-stream.
+  Referer/User-Agent from MX-style `headers` extras or a headers Bundle, and the `title` extra, are kept and
+  sent with the AirPlay `/play`. Checked on the Mi 10: the app is listed for HLS links and played
+  `…/2237e070…/1080p/playlist.jpg` on the TV.
+- Checked on the phone and TV: the `playlist.jpg` fMP4 stream played; +10 s, pause/play, add a subtitle link,
+  delay, Off and Stop all reached the TV. Not driven on the device: picking a subtitle file (system picker).
+- Code: `media/AirPlayClient.kt`, `media/AirPlaySession.kt`, `ui/screens/AirPlayCard.kt`. 88 unit tests pass.
+
 ## Implemented and installed
 
 - Version **2.0**, Android version code **2**, installed with settings/pairing preserved.

@@ -32,4 +32,29 @@ class IncomingIntentTest {
         val alias = app.packageManager.getActivityInfo(ComponentName(app.packageName, "io.github.tecix.textv.MainActivity"), 0)
         assertEquals("io.github.tecix.richtvremote.MainActivity", alias.targetActivity)
     }
+
+    @Test fun linksDisguisedAsImagesStayVideoUnlessTheAppSaysImage() {
+        val url = "https://nebula.example/hls/1080p/playlist.jpg"
+        val text = SharedMedia.from(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, url))!!
+        assertEquals("video/*", text.mime)
+        val photo = SharedMedia.from(Intent(Intent.ACTION_SEND).setType("image/jpeg").putExtra(Intent.EXTRA_TEXT, url))!!
+        assertEquals("image/jpeg", photo.mime)
+    }
+
+    @Test fun webVideoLinksFromOpenWithResolveAndKeepHeaders() {
+        val pm = RuntimeEnvironment.getApplication().packageManager
+        val url = "https://nebula.example/hls/1080p/playlist.jpg"
+        for (type in listOf("video/mp4", "application/x-mpegURL", "application/vnd.apple.mpegurl", "video/*")) {
+            val intent = Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(url), type)
+            assertTrue("VIEW $type link must resolve", pm.queryIntentActivities(intent, 0)
+                .any { it.activityInfo.name == "io.github.tecix.richtvremote.MainActivity" })
+        }
+        val view = Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(url), "application/x-mpegURL")
+            .putExtra("title", "Episode 1")
+            .putExtra("headers", arrayOf("Referer", "https://site.example/watch", "Cookie", "secret", "User-Agent", "WVC"))
+        val media = SharedMedia.from(view)!!
+        assertEquals("video/*", media.mime)
+        assertEquals("Episode 1", media.title)
+        assertEquals(mapOf("Referer" to "https://site.example/watch", "User-Agent" to "WVC"), media.headers)
+    }
 }

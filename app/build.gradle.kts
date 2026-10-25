@@ -14,8 +14,8 @@ android {
         applicationId = "io.github.tecix.textv"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "2.0"
+        versionCode = 3
+        versionName = "2.1"
     }
 
     // Release signing key: keystore.properties (gitignored) next to settings.gradle.kts.

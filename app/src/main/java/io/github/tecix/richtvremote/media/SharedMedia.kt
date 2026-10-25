@@ -6,7 +6,8 @@ import android.net.Uri
 import android.provider.OpenableColumns
 
 /** Incoming shares remain inert until the user chooses Play on TV. */
-data class SharedMedia(val uri: Uri, val mime: String, val title: String) {
+/** [headers]: Referer/User-Agent the sending app needed for this link (only for web links). */
+data class SharedMedia(val uri: Uri, val mime: String, val title: String, val headers: Map<String, String> = emptyMap()) {
     val isFile get() = uri.scheme == "content"
     companion object {
         @Suppress("DEPRECATION")
@@ -49,10 +50,38 @@ data class SharedMedia(val uri: Uri, val mime: String, val title: String) {
             require(uri.host !in listOf("drive.google.com", "docs.google.com")) {
                 "In Google Drive, use Send a copy or Open with to share the actual video/audio file. A private Drive page cannot play on the TV."
             }
-            return SharedMedia(uri, resolveMediaMime(intent.type, uri.lastPathSegment.orEmpty()) ?: "video/*",
-                intent.getStringExtra(Intent.EXTRA_TITLE) ?: uri.host.orEmpty())
+            // Streaming CDNs disguise playlists and segments as images (playlist.jpg); only the sharing
+            // app's own image/* type makes a link a photo.
+            val guessed = resolveMediaMime(intent.type, uri.lastPathSegment.orEmpty())
+            val mime = if (guessed?.startsWith("image/") == true && intent.type?.startsWith("image/") != true) "video/*" else guessed
+            val title = intent.getStringExtra(Intent.EXTRA_TITLE) ?: intent.getStringExtra("title")?.takeIf { it.isNotBlank() }
+            return SharedMedia(uri, mime ?: "video/*", title ?: uri.host.orEmpty(), linkHeaders(intent))
         }
     }
+}
+
+/**
+ * Request headers video apps attach to "Open with" links: MX Player's "headers" string array
+ * (name, value, …) or a Bundle under Browser.EXTRA_HEADERS / the media HTTP_HEADERS extra.
+ * Only Referer and User-Agent are kept; AirPlay passes them on to the TV.
+ */
+internal fun linkHeaders(intent: Intent): Map<String, String> {
+    val raw = linkedMapOf<String, String>()
+    runCatching { intent.getStringArrayExtra("headers") }.getOrNull()?.toList()?.chunked(2)?.forEach {
+        if (it.size == 2) raw[it[0]] = it[1]
+    }
+    for (key in listOf("com.android.browser.headers", "android.media.intent.extra.HTTP_HEADERS")) {
+        @Suppress("DEPRECATION")
+        val bundle = runCatching { intent.getBundleExtra(key) }.getOrNull() ?: continue
+        bundle.keySet().forEach { k -> bundle.getString(k)?.let { raw[k] = it } }
+    }
+    val out = linkedMapOf<String, String>()
+    raw.forEach { (k, v) ->
+        val name = when { k.equals("Referer", true) -> "Referer"; k.equals("User-Agent", true) -> "User-Agent"; else -> null }
+        if (name != null && v.isNotBlank() && v.length < 1024 && v.none { it.isISOControl() } &&
+            (name != "Referer" || Regex("(?i)https?://\\S+").matches(v))) out[name] = v.trim()
+    }
+    return out
 }
 
 /** Provider MIME types vary widely for MKV, TS and other containers; use the filename when needed. */

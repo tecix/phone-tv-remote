@@ -71,14 +71,7 @@ class MediaShareService : Service() {
                 _state.value = ShareState.Preparing
                 wake = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "RichTVRemote:sharing")
                     .apply { acquire(4 * 60 * 60_000L) }
-                val connectivity = getSystemService(ConnectivityManager::class.java)
-                val network = connectivity.activeNetwork ?: error("Connect the phone and TV to the same Wi-Fi")
-                val caps = connectivity.getNetworkCapabilities(network)
-                require(caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true ||
-                    caps?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true) { "Connect to local Wi-Fi to share a file" }
-                val address = connectivity.getLinkProperties(network)?.linkAddresses
-                    ?.map { it.address }?.filterIsInstance<Inet4Address>()?.firstOrNull { !it.isLoopbackAddress }
-                    ?: error("No local IPv4 address available")
+                val (address, caps) = localNetwork(this@MediaShareService)
                 val mediaFile = File.createTempFile("tv-media-", ".tmp", cacheDir)
                 file = mediaFile
                 // Cache provider data first: Drive may need to download it, and VLC needs a seekable file.
@@ -145,6 +138,19 @@ class MediaShareService : Service() {
         super.onDestroy()
     }
     companion object {
+        /** The phone's LAN IPv4 address, which the TV can reach; fails off Wi-Fi/Ethernet. */
+        internal fun localNetwork(context: android.content.Context): Pair<Inet4Address, NetworkCapabilities?> {
+            val connectivity = context.getSystemService(ConnectivityManager::class.java)
+            val network = connectivity.activeNetwork ?: error("Connect the phone and TV to the same Wi-Fi")
+            val caps = connectivity.getNetworkCapabilities(network)
+            require(caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true ||
+                caps?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true) { "Connect to local Wi-Fi to share a file" }
+            val address = connectivity.getLinkProperties(network)?.linkAddresses
+                ?.map { it.address }?.filterIsInstance<Inet4Address>()?.firstOrNull { !it.isLoopbackAddress }
+                ?: error("No local IPv4 address available")
+            return address to caps
+        }
+
         const val STOP = "io.github.tecix.richtvremote.STOP_SHARING"
         private val _running = MutableStateFlow(false)
         val running = _running.asStateFlow()

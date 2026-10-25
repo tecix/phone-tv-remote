@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import java.net.Inet4Address
 import java.util.ArrayDeque
 
-data class DiscoveredTv(val name: String, val host: String)
+data class DiscoveredTv(val name: String, val host: String, val port: Int = 0)
 
 private const val SERVICE_TYPE = "_androidtvremote2._tcp."
 private const val TAG = "TvDiscovery"
@@ -21,7 +21,10 @@ private const val TAG = "TvDiscovery"
  * Finds TVs that run the Android TV Remote service via mDNS.
  * Emits the full list each time a TV appears or goes away.
  */
-fun discoverTvs(context: Context): Flow<List<DiscoveredTv>> = callbackFlow {
+fun discoverTvs(context: Context): Flow<List<DiscoveredTv>> = discoverServices(context, SERVICE_TYPE)
+
+/** Any DNS-SD service type, e.g. "_airplay._tcp." for AirPlay receivers. */
+fun discoverServices(context: Context, serviceType: String): Flow<List<DiscoveredTv>> = callbackFlow {
     val nsd = context.getSystemService(Context.NSD_SERVICE) as NsdManager
     val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     // Some devices drop multicast replies unless an app holds this lock.
@@ -62,7 +65,7 @@ fun discoverTvs(context: Context): Flow<List<DiscoveredTv>> = callbackFlow {
                 }
                 synchronized(found) {
                     address?.hostAddress?.let { host ->
-                        found[serviceInfo.serviceName] = DiscoveredTv(serviceInfo.serviceName, host)
+                        found[serviceInfo.serviceName] = DiscoveredTv(serviceInfo.serviceName, host, serviceInfo.port)
                         publish()
                     }
                     resolving = false
@@ -97,7 +100,7 @@ fun discoverTvs(context: Context): Flow<List<DiscoveredTv>> = callbackFlow {
     }
 
     publish()
-    nsd.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
+    nsd.discoverServices(serviceType, NsdManager.PROTOCOL_DNS_SD, listener)
     awaitClose {
         runCatching { nsd.stopServiceDiscovery(listener) }
         runCatching { lock.release() }

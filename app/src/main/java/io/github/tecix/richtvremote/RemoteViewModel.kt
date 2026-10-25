@@ -16,6 +16,8 @@ import io.github.tecix.richtvremote.media.MediaDestination
 import io.github.tecix.richtvremote.media.replaceMediaTransfer
 import io.github.tecix.richtvremote.media.MediaStreaming
 import io.github.tecix.richtvremote.media.SharedPlayback
+import io.github.tecix.richtvremote.media.AirPlayReceiver
+import io.github.tecix.richtvremote.media.AirPlaySession
 import kotlinx.coroutines.flow.first
 import android.os.Build
 import androidx.lifecycle.AndroidViewModel
@@ -145,19 +147,93 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
         get() = streaming.playback.value
         set(value) { streaming.setPlayback(value) }
     private var discoveryJob: Job? = null
-    private val _mediaDestination = MutableStateFlow(sharedPlayback?.destination ?: MediaDestination.DLNA)
+    private val _mediaDestination = MutableStateFlow(sharedPlayback?.destination ?: MediaDestination.AIRPLAY)
     val mediaDestination = _mediaDestination.asStateFlow()
     val renderers = dlnaSession.receivers
     val renderer = dlnaSession.selected
     private var receiverRecoveryAttempts = 0
     private val _discoveringRenderers = MutableStateFlow(false)
     val discoveringRenderers = _discoveringRenderers.asStateFlow()
+    val airPlayReceivers = AirPlaySession.receivers
+    val airPlayReceiver = AirPlaySession.selected
+    val airPlay = AirPlaySession.nowPlaying
+    val pendingCaptions = AirPlaySession.pendingCaptions
+
+    private fun destinationReady(destination: MediaDestination) = when (destination) {
+        MediaDestination.DLNA -> renderer.value != null
+        MediaDestination.AIRPLAY -> airPlayReceiver.value != null
+        MediaDestination.VLC -> true
+    }
+
+    fun selectAirPlayReceiver(receiver: AirPlayReceiver) {
+        if (_shareBusy.value) return
+        AirPlaySession.select(receiver)
+        if (autoPlayReplacement) playSharedMedia()
+    }
+
+    /** Finds AirPlay receivers (TinyTV's own on the selected TV first). Shares the sheet's progress state with DLNA. */
+    fun discoverAirPlay(force: Boolean = false) {
+        if (!force && airPlayReceiver.value != null) {
+            if (autoPlayReplacement) playSharedMedia()
+            return
+        }
+        if (_discoveringRenderers.value || _shareBusy.value) return
+        _discoveringRenderers.value = true
+        _shareMessage.value = ""
+        discoveryJob = viewModelScope.launch {
+            try {
+                val tv = settings.value?.selectedTv
+                val found = AirPlaySession.discover(getApplication(), tv?.host, tv?.name)
+                if (found.isEmpty()) _shareMessage.value = "No AirPlay receiver found. Update TinyTV Receiver on the TV " +
+                    "(its AirPlay switch must be on) and check that both devices are on the same Wi-Fi."
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { _shareMessage.value = e.message ?: "AirPlay discovery failed" }
+            finally {
+                if (discoveryJob == kotlinx.coroutines.currentCoroutineContext()[Job]) {
+                    _discoveringRenderers.value = false
+                    if (autoPlayReplacement && airPlayReceiver.value != null) playSharedMedia()
+                }
+            }
+        }
+    }
+
+    // ── AirPlay playback controls ───────────────────────────────────────────
+
+    private fun airPlayCommand(action: suspend () -> Unit) {
+        viewModelScope.launch {
+            try { action() } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { messages.trySend("AirPlay: ${e.message ?: "command failed"}") }
+        }
+    }
+
+    fun airPlaySetPlaying(playing: Boolean) = airPlayCommand { AirPlaySession.setPlaying(playing) }
+    fun airPlaySeek(positionMs: Long) = airPlayCommand { AirPlaySession.seek(positionMs) }
+    fun airPlaySkip(deltaMs: Long) = airPlayCommand { AirPlaySession.skip(deltaMs) }
+    fun airPlaySelectCaptions(index: Int) = airPlayCommand { AirPlaySession.selectCaptions(index) }
+    fun airPlayShowCaptions(show: Boolean) = airPlayCommand { AirPlaySession.showCaptions(show) }
+    fun airPlayCaptionsDelay(deltaMs: Long) = airPlayCommand { AirPlaySession.addCaptionsDelay(deltaMs) }
+    fun addSubtitleUrl(url: String) = airPlayCommand {
+        AirPlaySession.addSubtitleUrl(url.trim())
+        messages.trySend(if (AirPlaySession.nowPlaying.value != null) "Subtitle sent to the TV" else "Subtitle will be sent with the video")
+    }
+    fun addSubtitleFile(uri: android.net.Uri) = airPlayCommand {
+        AirPlaySession.addSubtitleFile(getApplication(), uri)
+        messages.trySend(if (AirPlaySession.nowPlaying.value != null) "Subtitle sent to the TV" else "Subtitle will be sent with the video")
+    }
+    fun removePendingCaption(subtitle: io.github.tecix.richtvremote.media.ServedSubtitle) = AirPlaySession.removePendingCaption(subtitle)
+
+    /** Stop from the AirPlay card: the shared-file stop path also closes the phone's file server. */
+    fun airPlayStop() {
+        if (sharedPlayback?.destination == MediaDestination.AIRPLAY) stopSharing()
+        else airPlayCommand { AirPlaySession.stop() }
+    }
 
     fun setMediaDestination(destination: MediaDestination) {
         if (_shareBusy.value) return
         _mediaDestination.value = destination
         _shareMessage.value = ""
         if (destination == MediaDestination.DLNA) discoverRenderers()
+        else if (destination == MediaDestination.AIRPLAY) discoverAirPlay()
         else if (autoPlayReplacement) playSharedMedia()
     }
 
@@ -229,9 +305,11 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
         streaming.bindPending(shareJob, ::dismissShare)
         if (replacing) {
             stopFileSharing()
-            if (mediaDestination.value != MediaDestination.DLNA || renderer.value != null) playSharedMedia()
+            if (destinationReady(mediaDestination.value)) playSharedMedia()
+            else if (mediaDestination.value == MediaDestination.AIRPLAY) discoverAirPlay()
             else discoverRenderers()
         } else if (mediaDestination.value == MediaDestination.DLNA) discoverRenderers()
+        else if (mediaDestination.value == MediaDestination.AIRPLAY) discoverAirPlay()
     }
 
     fun dismissShare() {
@@ -246,6 +324,7 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
         _incomingShare.value = null
         _sharedChoices.value = emptyList()
         _shareBusy.value = false
+        AirPlaySession.clearPendingCaptions()
     }
 
     private fun stopFileSharing() {
@@ -263,8 +342,13 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
         _shareMessage.value = ""
         val destination = mediaDestination.value
         val renderer = renderer.value
+        val airplay = airPlayReceiver.value
         if (destination == MediaDestination.DLNA && renderer == null) {
             _shareMessage.value = "Choose a DLNA receiver first"
+            return
+        }
+        if (destination == MediaDestination.AIRPLAY && airplay == null) {
+            _shareMessage.value = "Choose an AirPlay receiver first"
             return
         }
         val original = settings.value ?: return
@@ -283,8 +367,13 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
                     }
                     suspend fun play(url: String, mime: String): Boolean {
                         // Record before sending, so a newer request can stop even a command cancelled in flight.
-                        sharedPlayback = SharedPlayback(destination, renderer, original)
+                        sharedPlayback = SharedPlayback(destination, renderer, original, airplay)
                         if (destination == MediaDestination.VLC) return openMedia(url, mime)
+                        if (destination == MediaDestination.AIRPLAY) {
+                            AirPlaySession.play(airplay!!, url, media.title, if (media.isFile) emptyMap() else media.headers)
+                            messages.trySend("Playing over AirPlay · ${airplay.name}")
+                            return true
+                        }
                         DlnaController.play(renderer!!, url, mime, media.title)
                         messages.trySend("DLNA playback requested · ${renderer.name}")
                         return true
@@ -307,7 +396,7 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
                         is ShareState.Failed -> { _shareMessage.value = result.message; messages.trySend(result.message) }
                         is ShareState.Serving -> {
                             val current = settings.value
-                            check(destination == MediaDestination.DLNA ||
+                            check(destination != MediaDestination.VLC ||
                                 (current?.route == original.route && current.selectedHost == original.selectedHost && current.ha == original.ha)) {
                                 "TV or connection changed. Share the media again."
                             }
@@ -358,6 +447,14 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     private var pairWhenNeeded = false
 
     init {
+        viewModelScope.launch {
+            AirPlaySession.ended.collect { message ->
+                if (message != null) {
+                    messages.trySend(message)
+                    AirPlaySession.consumeEnded()
+                }
+            }
+        }
         viewModelScope.launch {
             streaming.result.collect { result ->
                 if (result != null) messages.trySend(result.error?.let { "Could not fully stop streaming: $it" }

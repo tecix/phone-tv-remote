@@ -14,7 +14,7 @@ import java.net.SocketTimeoutException
 import java.net.URI
 import javax.xml.parsers.DocumentBuilderFactory
 
-enum class MediaDestination { DLNA, VLC }
+enum class MediaDestination { DLNA, VLC, AIRPLAY }
 
 data class DlnaRenderer(val name: String, val controlUrl: String, val serviceType: String) {
     val host: String get() = URI(controlUrl).host
