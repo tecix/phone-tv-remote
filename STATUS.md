@@ -1,6 +1,6 @@
-# Rich TV Remote 2.0 status
+# Rich TV Remote 2.1 status
 
-Last updated: 2026-10-24. **Read [HANDOFF.md](HANDOFF.md) to resume.**
+Last updated: 2026-10-26. **Read [HANDOFF.md](HANDOFF.md) to resume.**
 
 ## 2.1 (2026-10-26, installed on the Mi 10)
 
@@ -18,7 +18,10 @@ Last updated: 2026-10-24. **Read [HANDOFF.md](HANDOFF.md) to resume.**
   `…/2237e070…/1080p/playlist.jpg` on the TV.
 - Checked on the phone and TV: the `playlist.jpg` fMP4 stream played; +10 s, pause/play, add a subtitle link,
   delay, Off and Stop all reached the TV. Not driven on the device: picking a subtitle file (system picker).
-- Code: `media/AirPlayClient.kt`, `media/AirPlaySession.kt`, `ui/screens/AirPlayCard.kt`. 88 unit tests pass.
+- Code: `media/AirPlayClient.kt`, `media/AirPlaySession.kt`, `ui/screens/AirPlayCard.kt`.
+- Release: **89 tests passed**; signed release, R8 and release lint (zero errors, 12 warnings) passed. Same signing
+  certificate as 2.0. Lint flagged the mixed-case HLS MIME types in the VIEW filter; they are kept on purpose
+  (filter matching is case-sensitive) with `tools:ignore`. Published as [v2.1](https://github.com/tecix/phone-tv-remote/releases/tag/v2.1).
 
 ## Implemented and installed
 

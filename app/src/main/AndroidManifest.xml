@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -52,9 +53,10 @@
                 <data android:mimeType="video/*" />
                 <data android:mimeType="audio/*" />
                 <data android:mimeType="application/x-mpegurl" />
-                <data android:mimeType="application/x-mpegURL" />
+                <!-- Filter matching is case-sensitive and some senders keep the RFC casing. -->
+                <data android:mimeType="application/x-mpegURL" tools:ignore="AppLinkUrlError" />
                 <data android:mimeType="application/vnd.apple.mpegurl" />
-                <data android:mimeType="application/vnd.apple.mpegURL" />
+                <data android:mimeType="application/vnd.apple.mpegURL" tools:ignore="AppLinkUrlError" />
                 <data android:mimeType="audio/mpegurl" />
                 <data android:mimeType="audio/x-mpegurl" />
                 <data android:mimeType="application/dash+xml" />

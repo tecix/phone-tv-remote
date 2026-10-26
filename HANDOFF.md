@@ -1,15 +1,15 @@
-# Rich TV Remote 2.0 handoff
+# Rich TV Remote 2.1 handoff
 
-Updated 2026-10-24 (Asia/Ho_Chi_Minh).
+Updated 2026-10-26 (Asia/Ho_Chi_Minh).
 
 ## Current release
 
-The user explicitly requested version **2.0**, commit and push to the configured repository.
+The user explicitly requested version **2.1**, commit and push to the configured repository.
 Source, tests and docs form the release commit; inspect `git log -1` and `git status --short`
 for the exact current revision. Branch: `main`; origin: `tecix/phone-tv-remote`.
 
 - Display name: **Rich TV Remote**. Source namespace: `io.github.tecix.richtvremote`.
-  Gradle project: `rich-tv-remote`. Version name **2.0**, code **2**.
+  Gradle project: `rich-tv-remote`. Version name **2.1**, code **3**.
 - Installed application ID remains `io.github.tecix.textv` to preserve settings, URI grants,
   and paired identity. The old MainActivity component is retained as an alias.
 - Signed release installed with `adb install -r`. Do not uninstall, clear data, regenerate
@@ -48,8 +48,8 @@ for the exact current revision. Branch: `main`; origin: `tecix/phone-tv-remote`.
 
 ## README gallery and release
 
-Release page: https://github.com/tecix/phone-tv-remote/releases/tag/v2.0
-The signed phone APK is `rich-tv-remote-v2.0-arm64-v8a.apk`; SHA256SUMS accompanies it.
+Release page: https://github.com/tecix/phone-tv-remote/releases/tag/v2.1
+The signed phone APK is `rich-tv-remote-v2.1-arm64-v8a.apk`; SHA256SUMS accompanies it.
 README links 21 optimized WebP previews covering primary screens, panels, setup dialogs and
 light/dark/compact layouts. They use sample data, not private device contents. Regenerate with
 `./gradlew testDebugUnitTest --tests 'io.github.tecix.richtvremote.*ScreenshotTest'` then
@@ -58,8 +58,8 @@ looper render to avoid Espresso waiting indefinitely on its focused cursor; app 
 
 ## Validation and remaining device checks
 
-- Phone: **80 tests**, zero failures/errors. Signed release/R8 and release lint passed
-  (zero errors, 11 existing warnings). `git diff --check` passed.
+- Phone: **89 tests**, zero failures/errors. Signed release/R8 and release lint passed
+  (zero errors, 12 existing warnings). `git diff --check` passed.
 - Coverage includes parsing/routing, protocol, SOAP/HTTP ranges, real notification action
   dispatch/removal, pending command cancellation, rapid replacement ordering, retry after
   Stop failure, receiver reuse/disconnect/stale scans, UI controls and 21 screenshot renders.

@@ -1,4 +1,4 @@
-# Rich TV Remote 2.0 (Android)
+# Rich TV Remote 2.1 (Android)
 
 A phone remote for Google TV / Android TV, built with Kotlin, Jetpack Compose and
 **Material 3 Expressive**. One app, two ways to reach the TV, switchable at the top of the screen:
@@ -23,6 +23,7 @@ A phone remote for Google TV / Android TV, built with Kotlin, Jetpack Compose an
 | Macro actions | Add, rename, edit and delete any number of key sequences; defaults: **Captions** (`DOWN RIGHT*4 OK BACK`) and **1.5× speed** (`S`) |
 | Quick launch | YouTube, Web Video Caster, AirReceiver, VLC |
 | File streaming | Arrow-shaped File button opens the file picker; share/Open with accepts media containers, audio and photos, including generic file-manager MIME types and multiple files with a file choice |
+| AirPlay | Default Play on TV destination for phone files and http(s)/HLS/DASH links (also via Open with); AirPlay card with seek, play/pause, ±10 s, stop and subtitles (track, delay, .srt/.vtt from the phone or a link) |
 | IR Power (Home Assistant) | Runs your IR power script or button; set its entity in Settings → Home Assistant |
 | Phone | Volume keys control the TV, haptics, dynamic colour, light/dark |
 
@@ -76,7 +77,7 @@ Rendered from the v2.0 app UI with sample TV and media data. Select an image to 
 
 ## Install
 
-[Download Rich TV Remote 2.0 — signed ARM64 APK](https://github.com/tecix/phone-tv-remote/releases/download/v2.0/rich-tv-remote-v2.0-arm64-v8a.apk) · [Release notes and checksum](https://github.com/tecix/phone-tv-remote/releases/tag/v2.0)
+[Download Rich TV Remote 2.1 — signed ARM64 APK](https://github.com/tecix/phone-tv-remote/releases/download/v2.1/rich-tv-remote-v2.1-arm64-v8a.apk) · [Release notes and checksum](https://github.com/tecix/phone-tv-remote/releases/tag/v2.1)
 
 Open the APK on the phone and allow installation from your browser or file manager when asked.
 Requires Android 8.0+ on a 64-bit ARM phone (arm64-v8a). Install over the previous release to retain settings and TV pairing.
