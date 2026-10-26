@@ -384,10 +384,18 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
                     }
                     val app = getApplication<Application>()
                     startedFileShare = true
+                    if (destination == MediaDestination.AIRPLAY) {
+                        sharedPlayback = SharedPlayback(destination, renderer, original, airplay)
+                        AirPlaySession.preparing(airplay!!, media.title)
+                    }
                     MediaShareService.markPreparing()
                     ContextCompat.startForegroundService(app, Intent(app, MediaShareService::class.java)
                         .setDataAndType(media.uri, media.mime)
                         .apply {
+                            if (destination == MediaDestination.AIRPLAY) {
+                                putExtra(MediaShareService.AIRPLAY_HOST, airplay!!.host)
+                                putExtra(MediaShareService.AIRPLAY_PORT, airplay.port)
+                            }
                             clipData = ClipData.newUri(app.contentResolver, "Shared media", media.uri)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         })

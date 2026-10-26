@@ -47,7 +47,7 @@ internal fun AirPlayCard(nowPlaying: AirPlayNowPlaying, actions: RemoteActions) 
                 Column(Modifier.weight(1f)) {
                     Text(nowPlaying.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    Text(if (loading) "Opening on ${nowPlaying.receiver.name}…" else "AirPlay · ${nowPlaying.receiver.name}",
+                    Text(nowPlaying.preparation ?: if (loading) "Opening on ${nowPlaying.receiver.name}…" else "AirPlay · ${nowPlaying.receiver.name}",
                         style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
             }
@@ -67,7 +67,9 @@ internal fun AirPlayCard(nowPlaying: AirPlayNowPlaying, actions: RemoteActions) 
                 FilledTonalIconButton(onClick = { subtitles = true }) {
                     Icon(Icons.Rounded.ClosedCaption, "Subtitles")
                 }
-                FilledTonalIconButton(onClick = actions.airPlayStop) {
+                if (nowPlaying.preparation != null) {
+                    TextButton(onClick = actions.airPlayStop) { Text("Cancel") }
+                } else FilledTonalIconButton(onClick = actions.airPlayStop) {
                     Icon(Icons.Rounded.Stop, "Stop AirPlay")
                 }
             }

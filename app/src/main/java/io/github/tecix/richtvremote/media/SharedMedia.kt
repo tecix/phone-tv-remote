@@ -8,7 +8,7 @@ import android.provider.OpenableColumns
 /** Incoming shares remain inert until the user chooses Play on TV. */
 /** [headers]: Referer/User-Agent the sending app needed for this link (only for web links). */
 data class SharedMedia(val uri: Uri, val mime: String, val title: String, val headers: Map<String, String> = emptyMap()) {
-    val isFile get() = uri.scheme == "content"
+    val isFile get() = uri.scheme in listOf("content", "file")
     companion object {
         @Suppress("DEPRECATION")
         fun from(intent: Intent): SharedMedia? = allFrom(intent).singleOrNull()
@@ -26,7 +26,7 @@ data class SharedMedia(val uri: Uri, val mime: String, val title: String, val he
             require(streams.size <= 100) { "Share up to 100 media files at a time" }
             if (streams.isNotEmpty()) return streams.map { stream ->
                 if (stream.scheme in listOf("http", "https")) return@map fromUrl(stream.toString(), intent)
-                require(stream.scheme == "content") { "Share a media file using its app’s Share action" }
+                require(stream.scheme in listOf("content", "file")) { "Share a media file using its app’s Share action" }
                 val title = runCatching {
                     resolver?.query(stream, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
                         if (it.moveToFirst()) it.getString(0) else null

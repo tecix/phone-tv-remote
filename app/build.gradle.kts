@@ -14,8 +14,8 @@ android {
         applicationId = "io.github.tecix.textv"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "2.1"
+        versionCode = 4
+        versionName = "2.2"
     }
 
     // Release signing key: keystore.properties (gitignored) next to settings.gradle.kts.
@@ -68,6 +68,8 @@ kotlin {
 }
 
 dependencies {
+    implementation("androidx.media3:media3-transformer:1.8.0")
+    implementation("androidx.media3:media3-effect:1.8.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

@@ -37,7 +37,7 @@ class MediaShareService : Service() {
     override fun onCreate() {
         super.onCreate()
         _running.value = true
-        cacheDir.listFiles { f -> f.name.startsWith("tv-media-") && f.extension == "tmp" }?.forEach { it.delete() }
+        cacheDir.listFiles { f -> (f.name.startsWith("tv-media-") && f.extension == "tmp") || f.name.startsWith("tv-transcode-") }?.forEach { it.delete() }
     }
     override fun onBind(intent: Intent?): IBinder? = null
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -63,6 +63,7 @@ class MediaShareService : Service() {
             // A replacement must finish closing the previous file/server before preparing its own.
             withContext(NonCancellable) { previous?.join() }
             var file: File? = null
+            var transcoded: File? = null
             var stream: SingleMediaServer? = null
             var wake: PowerManager.WakeLock? = null
             var wifi: WifiManager.WifiLock? = null
@@ -99,7 +100,30 @@ class MediaShareService : Service() {
                     .firstOrNull { !it.endsWith("/*") }
                     ?: "application/octet-stream"
                 ensureActive()
-                val mediaServer = SingleMediaServer(mediaFile, mime, address)
+                var servingFile = mediaFile
+                var servingMime = mime
+                val airplayHost = intent.getStringExtra(AIRPLAY_HOST)
+                if (airplayHost != null) {
+                    val receiver = AirPlayReceiver(airplayHost, airplayHost, intent.getIntExtra(AIRPLAY_PORT, 7000))
+                    val source = PhoneVideoTranscoder.inspect(mediaFile)
+                    if (source != null && AirPlayCapabilities.fetch(receiver).needsTranscode(source)) {
+                        val output = File(cacheDir, "tv-transcode-${java.util.UUID.randomUUID()}.mp4")
+                        transcoded = output
+                        PhoneVideoTranscoder.transcode(this@MediaShareService, mediaFile, source, output) { percent ->
+                            val message = "Converting video on phone" + (percent?.let { " · $it%" } ?: "…")
+                            AirPlaySession.preparationProgress(message)
+                            getSystemService(NotificationManager::class.java).notify(42,
+                                NotificationCompat.Builder(this@MediaShareService, "tv-sharing")
+                                    .setSmallIcon(R.drawable.ic_stat_share).setContentTitle("Preparing AirPlay video")
+                                    .setContentText(message).setContentIntent(open).setOngoing(true)
+                                    .setProgress(100, percent ?: 0, percent == null).addAction(0, "Cancel", stop).build())
+                        }
+                        servingFile = output
+                        servingMime = "video/mp4"
+                        mediaFile.delete()
+                    }
+                }
+                val mediaServer = SingleMediaServer(servingFile, servingMime, address)
                 stream = mediaServer
                 // Keep Wi-Fi out of power saving while the TV pulls the video, including with the phone locked.
                 if (caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) {
@@ -110,7 +134,8 @@ class MediaShareService : Service() {
                     lock.acquire()
                 }
                 ensureActive()
-                _state.value = ShareState.Serving(mediaServer.url, mime)
+                getSystemService(NotificationManager::class.java).notify(42, notification)
+                _state.value = ShareState.Serving(mediaServer.url, servingMime)
                 delay(4 * 60 * 60_000L)
                 stopSelf(startId)
             } catch (e: CancellationException) { throw e }
@@ -121,6 +146,8 @@ class MediaShareService : Service() {
                 preparingInput = null
                 runCatching { stream?.close() }
                 runCatching { file?.delete() }
+                runCatching { transcoded?.delete() }
+                AirPlaySession.clearPreparation()
                 runCatching { if (wake?.isHeld == true) wake.release() }
                 runCatching { if (wifi?.isHeld == true) wifi.release() }
             }
@@ -151,6 +178,8 @@ class MediaShareService : Service() {
             return address to caps
         }
 
+        internal const val AIRPLAY_HOST = "airplayHost"
+        internal const val AIRPLAY_PORT = "airplayPort"
         const val STOP = "io.github.tecix.richtvremote.STOP_SHARING"
         private val _running = MutableStateFlow(false)
         val running = _running.asStateFlow()

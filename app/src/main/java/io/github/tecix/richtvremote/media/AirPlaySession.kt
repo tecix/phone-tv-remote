@@ -18,7 +18,7 @@ class ServedSubtitle internal constructor(val name: String, val url: String,
     internal val server: SingleMediaServer?, internal val file: File?)
 
 /** The video currently sent over AirPlay, and what the TV last reported about it. */
-data class AirPlayNowPlaying(val receiver: AirPlayReceiver, val title: String, val status: AirPlayStatus?)
+data class AirPlayNowPlaying(val receiver: AirPlayReceiver, val title: String, val status: AirPlayStatus?, val preparation: String? = null)
 
 /**
  * App-scoped AirPlay sender: the chosen receiver, the video on it, playback polling and the subtitle
@@ -35,6 +35,18 @@ internal object AirPlaySession {
     /** Subtitles chosen in the share sheet before Play; sent with /play. */
     private val _pendingCaptions = MutableStateFlow<List<ServedSubtitle>>(emptyList())
     val pendingCaptions = _pendingCaptions.asStateFlow()
+
+    internal fun preparing(receiver: AirPlayReceiver, title: String, message: String = "Preparing video on phone…") {
+        _nowPlaying.value = AirPlayNowPlaying(receiver, title, null, message)
+    }
+
+    internal fun preparationProgress(message: String) {
+        _nowPlaying.value?.takeIf { it.preparation != null }?.let { _nowPlaying.value = it.copy(preparation = message) }
+    }
+
+    internal fun clearPreparation() {
+        if (_nowPlaying.value?.preparation != null) _nowPlaying.value = null
+    }
 
     private var client: AirPlayClient? = null
     private var poller: Job? = null
