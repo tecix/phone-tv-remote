@@ -1,4 +1,4 @@
-# Rich TV Remote 2.1 (Android)
+# Rich TV Remote 2.2 (Android)
 
 A phone remote for Google TV / Android TV, built with Kotlin, Jetpack Compose and
 **Material 3 Expressive**. One app, two ways to reach the TV, switchable at the top of the screen:
@@ -77,7 +77,7 @@ Rendered from the v2.0 app UI with sample TV and media data. Select an image to 
 
 ## Install
 
-[Download Rich TV Remote 2.1 — signed ARM64 APK](https://github.com/tecix/phone-tv-remote/releases/download/v2.1/rich-tv-remote-v2.1-arm64-v8a.apk) · [Release notes and checksum](https://github.com/tecix/phone-tv-remote/releases/tag/v2.1)
+[Download Rich TV Remote 2.2 — signed ARM64 APK](https://github.com/tecix/phone-tv-remote/releases/download/v2.2/rich-tv-remote-v2.2-arm64-v8a.apk) · [Release notes and checksum](https://github.com/tecix/phone-tv-remote/releases/tag/v2.2)
 
 Open the APK on the phone and allow installation from your browser or file manager when asked.
 Requires Android 8.0+ on a 64-bit ARM phone (arm64-v8a). Install over the previous release to retain settings and TV pairing.
@@ -121,7 +121,7 @@ GPL-3.0-or-later, the same as gnome-tv-remote, which the protocol code is ported
 - **Stop TV streaming** on the main screen and **Stop streaming** in the notification use the same operation: cancel pending work, stop TV playback, close the phone server, remove the temporary file and release locks. Stop keeps the DLNA receiver selected; Disconnect clears the selection and stops active DLNA streaming. Stop errors remain visible for retry.
 - Choose **AirReceiver / DLNA**, select the TV's discovered renderer, then **Play on [receiver]**. The selected Direct/HA route requests AirReceiver startup before discovery and retries while it starts. Direct uses the existing paired TinyTV AppLink helper; no new TV helper install is required. Enable DLNA in AirReceiver once: launching the app uses its saved settings. If no remote route is connected, open AirReceiver manually; actual DLNA streaming/discovery works independently. **VLC** remains available through the remote route for audio/video. For Google Drive, share the **actual file** with **Send a copy/Open with**; private Drive webpage links cannot be opened as authenticated media URLs on the TV.
 - While a DLNA/VLC share is active, picking or sharing a new file automatically stops the old transfer, closes its server and removes its cache, then plays the new file on the selected destination. Rapid replacements cancel superseded preparation/commands. The first share still uses the destination panel; if a receiver is unavailable, the panel keeps the new file for retry.
-- File shares are cached on the phone before serving a single secret-path URL over local Wi-Fi. VLC/DLNA can issue HEAD and byte-range requests for seeking. A connected-device foreground service and CPU/Wi-Fi locks keep the transfer active while the phone is locked. Stop from the app or notification; transfers expire after four hours and temporary files are deleted. Phone/TV must be mutually reachable on the LAN, and sufficient phone cache space is required. Nothing is uploaded to a cloud service. AirReceiver plays the original file without transcoding; codec support and available Wi-Fi bandwidth still determine smoothness.
+- File shares are cached on the phone before serving a single secret-path URL over local Wi-Fi. VLC/DLNA can issue HEAD and byte-range requests for seeking. A connected-device foreground service and CPU/Wi-Fi locks keep the transfer active while the phone is locked. Stop from the app or notification; transfers expire after four hours and temporary files are deleted. Phone/TV must be mutually reachable on the LAN, and sufficient phone cache space is required. Nothing is uploaded to a cloud service. DLNA and VLC get the original file; over AirPlay, local clips the TV cannot decode or rotate (H.264 above 1080p, rotated HEVC beyond its limits) are first converted on the phone to H.264 ≤ 1080p30. Codec support and available Wi-Fi bandwidth still determine smoothness.
 - Receiver source changes are also captured in `receiver-media.patch`. The TV media API is compiled in the receiver build; its existing JVM regression suite isolates Android MediaSession behavior, which needs device verification.
 
 The source namespace is `io.github.tecix.richtvremote`, and the Gradle project is `rich-tv-remote`. The installed Android application ID remains `io.github.tecix.textv` so signed updates preserve settings, URI grants and paired identity. A compatibility alias preserves the previous activity component.

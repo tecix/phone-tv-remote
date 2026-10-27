@@ -1,4 +1,4 @@
-# Rich TV Remote 2.1 handoff
+# Rich TV Remote 2.2 handoff
 
 Updated 2026-10-26 (Asia/Ho_Chi_Minh).
 
@@ -48,8 +48,8 @@ for the exact current revision. Branch: `main`; origin: `tecix/phone-tv-remote`.
 
 ## README gallery and release
 
-Release page: https://github.com/tecix/phone-tv-remote/releases/tag/v2.1
-The signed phone APK is `rich-tv-remote-v2.1-arm64-v8a.apk`; SHA256SUMS accompanies it.
+Release page: https://github.com/tecix/phone-tv-remote/releases/tag/v2.2
+The signed phone APK is `rich-tv-remote-v2.2-arm64-v8a.apk`; SHA256SUMS accompanies it.
 README links 21 optimized WebP previews covering primary screens, panels, setup dialogs and
 light/dark/compact layouts. They use sample data, not private device contents. Regenerate with
 `./gradlew testDebugUnitTest --tests 'io.github.tecix.richtvremote.*ScreenshotTest'` then

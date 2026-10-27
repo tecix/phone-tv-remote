@@ -1,6 +1,17 @@
-# Rich TV Remote 2.1 status
+# Rich TV Remote 2.2 status
 
-Last updated: 2026-10-26. **Read [HANDOFF.md](HANDOFF.md) to resume.**
+Last updated: 2026-10-27. **Read [HANDOFF.md](HANDOFF.md) to resume.**
+
+## 2.2 (2026-10-27)
+
+- **Phone videos the TV can't show are converted before AirPlay.** The sender reads the clip's codec, size,
+  frame rate and rotation plus the receiver's `GET /tinytv/caps` (defaults for other receivers). H.264 above
+  1080p and rotated HEVC beyond the TV's limits are converted on the phone with Media3 Transformer (hardware
+  encoder) to upright H.264 ≤ 1080p30 + AAC, then served over the existing Range server. Progress and Cancel
+  on the AirPlay card and notification; at most one converted file is kept. Links are never converted.
+- Code: `media/AirPlayCapabilities.kt`, `media/PhoneVideoTranscoder.kt`, `media/MediaShareService.kt`, `ui/screens/AirPlayCard.kt`.
+- Release: **95 tests passed**; signed release, R8 and release lint (zero errors, 26 warnings). Same signing
+  certificate as 2.1. Published as [v2.2](https://github.com/tecix/phone-tv-remote/releases/tag/v2.2).
 
 ## 2.1 (2026-10-26, installed on the Mi 10)
 
