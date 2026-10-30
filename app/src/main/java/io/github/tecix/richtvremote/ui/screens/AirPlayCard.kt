@@ -1,6 +1,13 @@
 package io.github.tecix.richtvremote.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.toShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,48 +35,75 @@ import androidx.compose.ui.unit.dp
 import io.github.tecix.richtvremote.media.AirPlayNowPlaying
 import io.github.tecix.richtvremote.media.AirPlayStatus
 
-/** Controls for the video this phone sent over AirPlay: timeline, play/pause, ±10 s, stop, subtitles. */
+/**
+ * The video on the TV over AirPlay: title, timeline, play/pause, ±10 s, subtitles, stop. Shown alone, or
+ * inside the TV's now-playing card when [tvState] (e.g. "Now on SmartTube") and [volume] are given.
+ */
 @Composable
-internal fun AirPlayCard(nowPlaying: AirPlayNowPlaying, actions: RemoteActions) {
+internal fun AirPlayCard(nowPlaying: AirPlayNowPlaying, actions: RemoteActions, tvState: String? = null, volume: String? = null) {
     val status = nowPlaying.status
     val loading = status == null || status.state == AirPlayStatus.State.LOADING
     val playing = status?.state == AirPlayStatus.State.PLAYING
+    // Until the TV's own player is decoding, it still pulls the video from the sender.
+    val stage = status?.stage
+    val dependent = !loading && nowPlaying.preparation == null && (stage == "buffering" || stage == "opening" || stage == "checking")
     var subtitles by rememberSaveable { mutableStateOf(false) }
+    val scheme = MaterialTheme.colorScheme
     Card(
-        Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        Modifier.fillMaxWidth().animateContentSize(),
+        shape = RoundedCornerShape(32.dp),
+        colors = CardDefaults.cardColors(containerColor = scheme.primaryContainer, contentColor = scheme.onPrimaryContainer),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Airplay, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                Spacer(Modifier.width(12.dp))
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Box(Modifier.size(52.dp).clip(MaterialShapes.Cookie9Sided.toShape()).background(scheme.primary),
+                    contentAlignment = Alignment.Center) {
+                    Icon(Icons.Rounded.Airplay, null, tint = scheme.onPrimary)
+                }
                 Column(Modifier.weight(1f)) {
-                    Text(nowPlaying.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer)
-                    Text(nowPlaying.preparation ?: if (loading) "Opening on ${nowPlaying.receiver.name}…" else "AirPlay · ${nowPlaying.receiver.name}",
-                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text(nowPlaying.title, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        nowPlaying.preparation ?: if (loading) when (stage) {
+                            "opening" -> "TV player is opening the stream…"
+                            "checking" -> "TV is checking the video…"
+                            else -> "Opening on ${nowPlaying.receiver.name}…"
+                        } else if (dependent) "Buffering · the TV still needs this phone"
+                        else listOfNotNull("AirPlay · ${nowPlaying.receiver.name}", tvState).joinToString(" · "),
+                        style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        color = scheme.onPrimaryContainer.copy(alpha = .78f),
+                    )
+                }
+                if (volume != null) Surface(shape = CircleShape, color = scheme.primary.copy(alpha = .14f)) {
+                    Text(volume, Modifier.padding(horizontal = 12.dp, vertical = 6.dp), style = MaterialTheme.typography.labelLarge)
                 }
             }
-            if (loading) LinearWavyProgressIndicator(Modifier.fillMaxWidth().padding(vertical = 8.dp))
+            if (loading) LinearWavyProgressIndicator(Modifier.fillMaxWidth().padding(vertical = 12.dp))
             else PlaybackTimeline(status!!.toPlayback(nowPlaying.title), true, actions.airPlaySeek)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                FilledTonalIconButton(onClick = { actions.airPlaySkip(-10_000) }, enabled = !loading) {
-                    Icon(Icons.Rounded.Replay10, "Back 10 seconds")
-                }
-                FilledIconButton(onClick = { actions.airPlaySetPlaying(!playing) }, enabled = !loading,
-                    modifier = Modifier.size(56.dp)) {
-                    Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playing) "Pause" else "Play")
-                }
-                FilledTonalIconButton(onClick = { actions.airPlaySkip(10_000) }, enabled = !loading) {
-                    Icon(Icons.Rounded.Forward10, "Forward 10 seconds")
-                }
-                FilledTonalIconButton(onClick = { subtitles = true }) {
+            // Mid-play stalls: the cue disappears once the TV player is decoding on its own again.
+            AnimatedVisibility(dependent) { LinearWavyProgressIndicator(Modifier.fillMaxWidth()) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                FilledTonalIconButton(onClick = { subtitles = true }, shapes = IconButtonDefaults.shapes()) {
                     Icon(Icons.Rounded.ClosedCaption, "Subtitles")
                 }
-                if (nowPlaying.preparation != null) {
-                    TextButton(onClick = actions.airPlayStop) { Text("Cancel") }
-                } else FilledTonalIconButton(onClick = actions.airPlayStop) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    FilledTonalIconButton(onClick = { actions.airPlaySkip(-10_000) }, enabled = !loading,
+                        shapes = IconButtonDefaults.shapes(), modifier = Modifier.size(52.dp)) {
+                        Icon(Icons.Rounded.Replay10, "Back 10 seconds")
+                    }
+                    FilledIconButton(onClick = { actions.airPlaySetPlaying(!playing) }, enabled = !loading,
+                        shapes = IconButtonDefaults.shapes(), modifier = Modifier.size(72.dp, 64.dp)) {
+                        Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (playing) "Pause" else "Play",
+                            Modifier.size(32.dp))
+                    }
+                    FilledTonalIconButton(onClick = { actions.airPlaySkip(10_000) }, enabled = !loading,
+                        shapes = IconButtonDefaults.shapes(), modifier = Modifier.size(52.dp)) {
+                        Icon(Icons.Rounded.Forward10, "Forward 10 seconds")
+                    }
+                }
+                if (nowPlaying.preparation != null) TextButton(onClick = actions.airPlayStop) { Text("Cancel") }
+                else FilledTonalIconButton(onClick = actions.airPlayStop, shapes = IconButtonDefaults.shapes(),
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = scheme.errorContainer,
+                        contentColor = scheme.onErrorContainer)) {
                     Icon(Icons.Rounded.Stop, "Stop AirPlay")
                 }
             }

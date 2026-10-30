@@ -81,7 +81,8 @@ class AirPlayClientTest {
             """"error":null,"caption":1,"captionOffsetMs":-500,"captions":["a.srt","b \"en\".vtt"]}"""
         FakeReceiver(mapOf("/tinytv/status" to (200 to json))).use { tv ->
             val s = AirPlayClient(tv.receiver).status()
-            assertEquals(AirPlayStatus(AirPlayStatus.State.PLAYING, 22_105, 3_410_374, listOf("a.srt", "b \"en\".vtt"), 1, -500, null, true), s)
+            assertEquals(AirPlayStatus(AirPlayStatus.State.PLAYING, 22_105, 3_410_374, listOf("a.srt", "b \"en\".vtt"), 1, -500, null, true,
+                "http://127.0.0.1:7000/hls/x/p1.m3u8"), s)
             assertTrue(s.active)
         }
         val plist = "<plist><dict><key>duration</key>\n<real>100.5</real><key>position</key>\n<real>12.0</real>" +

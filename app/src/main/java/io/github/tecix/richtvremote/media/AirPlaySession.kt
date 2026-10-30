@@ -104,6 +104,28 @@ internal object AirPlaySession {
         poll(c)
     }
 
+    /**
+     * Attaches to a video already playing on [receiver] (started from another device, or before this app
+     * was reopened) so the card and controls work for it. Returns true when it adopted one.
+     */
+    suspend fun adopt(receiver: AirPlayReceiver): Boolean {
+        if (client != null || _nowPlaying.value != null) return false
+        val c = AirPlayClient(receiver)
+        val status = runCatching { c.status() }.getOrNull()?.takeIf { it.active } ?: return false
+        // The probe suspended: a local play() or preparation may have started meanwhile.
+        if (client != null || _nowPlaying.value != null) return false
+        client = c
+        if (_selected.value == null) select(receiver)
+        _nowPlaying.value = AirPlayNowPlaying(receiver, titleOf(status.url), status)
+        poll(c)
+        return true
+    }
+
+    private fun titleOf(url: String?): String {
+        val name = url?.let { runCatching { Uri.parse(it).lastPathSegment }.getOrNull() }
+        return name?.takeIf { it.isNotBlank() && !it.startsWith("p1.") } ?: "Video on the TV"
+    }
+
     private fun poll(c: AirPlayClient) {
         poller = scope.launch {
             var failures = 0

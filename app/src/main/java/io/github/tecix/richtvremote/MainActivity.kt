@@ -139,6 +139,7 @@ private fun App(vm: RemoteViewModel) {
     var voiceAutoStart by rememberSaveable { mutableStateOf(true) }
     var voice by rememberSaveable { mutableStateOf(false) }
     var keyboard by rememberSaveable { mutableStateOf(false) }
+    var pasteLink by rememberSaveable { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     val mediaPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -203,6 +204,7 @@ private fun App(vm: RemoteViewModel) {
                     openDevices = { screen = Screen.Devices },
                     openSettings = { screen = Screen.Settings },
                     openKeyboard = { keyboard = true },
+                    pasteLink = { pasteLink = true },
                     pair = { s.selectedTv?.let(vm::startPairing) },
                     retry = vm::retryDirect,
                     runMacro = vm::runMacro,
@@ -278,6 +280,16 @@ private fun App(vm: RemoteViewModel) {
             canSend = canSend,
             onDismiss = { voice = false },
             onSend = vm::searchSmartTube,
+        )
+    }
+
+    if (pasteLink) {
+        io.github.tecix.richtvremote.ui.screens.PasteLinkSheet(
+            onDismiss = { pasteLink = false },
+            onSubmit = { url ->
+                pasteLink = false
+                vm.receiveShare(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+            },
         )
     }
 

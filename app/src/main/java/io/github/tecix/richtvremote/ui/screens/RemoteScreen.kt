@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.automirrored.rounded.Input
 import androidx.compose.material.icons.rounded.Keyboard
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -148,6 +149,7 @@ class RemoteActions(
     val seekTo: (Long) -> Unit = {},
     val setupMediaAccess: () -> Unit = {},
     val pickMedia: () -> Unit = {},
+    val pasteLink: () -> Unit = {},
     val disconnectDlna: () -> Unit = {},
     val airPlaySetPlaying: (Boolean) -> Unit = {},
     val airPlaySeek: (Long) -> Unit = {},
@@ -219,8 +221,10 @@ fun RemoteScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                ConnectionCard(settings, direct, ha, status, haTile, canSend, actions)
-                airPlay?.let { AirPlayCard(it, actions) }
+                ConnectionCard(settings, direct, ha, status, haTile, canSend, actions, airPlay)
+                // Direct route: the AirPlay controls live inside the TV's now-playing card.
+                val merged = settings.route == Route.DIRECT && direct is DirectState.Connected
+                if (!merged) airPlay?.let { AirPlayCard(it, actions) }
                 if (mediaAccessRequired) TextButton(onClick = actions.setupMediaAccess) { Text("Enable playback access on TV") }
                 SmartTubeSearchEntry(actions)
                 if (sharingFile) TextButton(onClick = onStopSharing, enabled = !stoppingStreaming) {
@@ -320,6 +324,11 @@ private fun SmartTubeSearchEntry(actions: RemoteActions) {
             modifier = Modifier.width(76.dp).height(64.dp).semantics { contentDescription = "Choose file for TV" }) {
             Text("File", maxLines = 1)
         }
+        RemoteIconButton(Icons.Rounded.Link, "Play a link on TV", { actions.pasteLink() }, size = 64.dp,
+            shapes = IconButtonDefaults.shapes(MaterialShapes.Cookie6Sided.toShape(), MaterialShapes.Cookie9Sided.toShape()),
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer))
         Surface(modifier = Modifier.weight(1f), shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Row(Modifier.fillMaxWidth().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 TextButton(
@@ -348,6 +357,7 @@ private fun ConnectionCard(
     haTile: HaTile,
     canSend: Boolean,
     actions: RemoteActions,
+    airPlay: io.github.tecix.richtvremote.media.AirPlayNowPlaying? = null,
 ) {
     AnimatedContent(
         targetState = Triple(settings.route, direct, ha),
@@ -374,7 +384,7 @@ private fun ConnectionCard(
                     "Retry", actions.retry, busy = true,
                 )
                 is DirectState.Connecting -> Notice("Connecting to ${direct.tv.name}…", null, null, null, busy = true)
-                is DirectState.Connected -> NowPlaying(status, actions, canSend)
+                is DirectState.Connected -> NowPlaying(status, actions, canSend, airPlay)
             }
             Route.HOME_ASSISTANT -> when (ha) {
                 HaState.Unconfigured -> Notice(
@@ -428,9 +438,15 @@ private fun Notice(title: String, body: String?, action: String?, onAction: (() 
 }
 
 @Composable
-private fun NowPlaying(status: TvStatus, actions: RemoteActions, enabled: Boolean) {
+private fun NowPlaying(status: TvStatus, actions: RemoteActions, enabled: Boolean,
+                       airPlay: io.github.tecix.richtvremote.media.AirPlayNowPlaying? = null) {
     val app = status.currentApp?.let { pkg -> QuickApps.firstOrNull { it.packageName == pkg }?.name ?: pkg.substringAfterLast('.') }
     val volume = status.volume
+    if (airPlay != null) {
+        AirPlayCard(airPlay, actions, tvState = app?.let { "on $it" },
+            volume = volume?.let { if (it.muted) "Muted" else "Vol ${it.level}" })
+        return
+    }
     Card(
         Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),

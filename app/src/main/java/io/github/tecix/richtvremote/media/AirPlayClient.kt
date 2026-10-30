@@ -24,6 +24,9 @@ data class AirPlayStatus(
     val captionOffsetMs: Long = 0,
     val error: String? = null,
     val extended: Boolean = false,
+    val url: String? = null,
+    /** Why the TV still depends on the sender: "checking", "opening" or "buffering"; null once it plays by itself. */
+    val stage: String? = null,
 ) {
     enum class State { IDLE, LOADING, PLAYING, PAUSED, ENDED }
     val active: Boolean get() = state == State.LOADING || state == State.PLAYING || state == State.PAUSED
@@ -121,6 +124,8 @@ class AirPlayClient(val receiver: AirPlayReceiver) {
                 captionOffsetMs = o.optLong("captionOffsetMs", 0),
                 error = o.optString("error").takeIf { !o.isNull("error") && it.isNotBlank() },
                 extended = true,
+                stage = o.optString("stage").takeIf { !o.isNull("stage") && it.isNotBlank() },
+                url = o.optString("url").takeIf { !o.isNull("url") && it.isNotBlank() },
             )
         }
 

@@ -447,6 +447,7 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
     private var connectJob: Job? = null
     private var tileJob: Job? = null
     private var mediaJob: Job? = null
+    private var airPlayWatch: Job? = null
     private var foreground = false
     private var recognizingSpeech = false
     private var lastHaError = 0L
@@ -489,8 +490,21 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
 
     // ── Lifecycle ───────────────────────────────────────────────────────────
 
+    /** While the app is open, picks up a video already playing on the selected TV's AirPlay receiver. */
+    private fun watchAirPlay() {
+        airPlayWatch?.cancel()
+        airPlayWatch = viewModelScope.launch {
+            while (foreground) {
+                val tv = settings.value?.selectedTv
+                if (tv != null) runCatching { AirPlaySession.adopt(AirPlayReceiver(tv.name, tv.host)) }
+                delay(3_000)
+            }
+        }
+    }
+
     fun onForeground() {
         foreground = true
+        watchAirPlay()
         updateTilePolling()
         val state = _direct.value
         if (state !is DirectState.Connected && state !is DirectState.Connecting) {
@@ -500,6 +514,7 @@ class RemoteViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onBackground() {
         foreground = false
+        airPlayWatch?.cancel()
         updateTilePolling()
         // The recognizer is a temporary phone activity; keep the paired route ready for its result.
         if (recognizingSpeech) return
